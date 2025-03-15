@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: fund_notes_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: fund_notes
+      MYSQL_USER: fund_user
+      MYSQL_PASSWORD: fund_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - fund_notes_network
+
+  redis:
+    image: redis:6.2
+    container_name: fund_notes_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - fund_notes_network
+
+networks:
+  fund_notes_network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data: 
