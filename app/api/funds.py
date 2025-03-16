@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 import json
 import requests
 import time
+import re
 
 from app.extensions import db, redis_client
 from app.models import Fund, Note
@@ -110,6 +111,7 @@ def get_fund(code):
         
         if fund is None:
             current_app.logger.warning(f"基金不存在: {code}")
+            
             response_time = time.time() - start_time
             current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
             return jsonify({'message': '基金不存在'}), 404
@@ -297,4 +299,195 @@ def get_fund_notes(code):
         current_app.logger.error(f"获取基金相关笔记失败: {str(e)}")
         response_time = time.time() - start_time
         current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
-        return jsonify({'message': '获取基金相关笔记失败'}), 500 
+        return jsonify({'message': '获取基金相关笔记失败'}), 500
+
+
+@funds_bp.route('/query_external/<string:code>', methods=['GET'])
+def query_external_fund(code):
+    """从天天基金网API查询基金信息"""
+    start_time = time.time()
+    current_app.logger.info(f"API调用: 从天天基金网查询基金信息 - 基金代码: {code}")
+    
+    # 尝试从缓存获取
+    cache_key = f'funds:external:{code}'
+    cached_data = redis_client.get(cache_key)
+    
+    if cached_data:
+        current_app.logger.info(f"缓存命中: {cache_key}")
+        response_time = time.time() - start_time
+        current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+        return jsonify(json.loads(cached_data)), 200
+    
+    current_app.logger.info(f"缓存未命中: {cache_key}")
+    
+    try:
+        # 查询天天基金网API获取基金实时信息
+        # 接口1: 基金实时信息
+        url = f'http://fundgz.1234567.com.cn/js/{code}.js?rt={int(time.time() * 1000)}'
+        current_app.logger.info(f"请求天天基金网API: {url}")
+        
+        response = requests.get(url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        })
+        
+        if response.status_code != 200:
+            current_app.logger.error(f"天天基金网API请求失败: 状态码 {response.status_code}")
+            response_time = time.time() - start_time
+            current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+            return jsonify({'message': '天天基金网API请求失败'}), 500
+        
+        # 解析返回的数据，格式为 jsonpgz({"fundcode":"161725","name":"招商中证白酒指数(LOF)","jzrq":"2021-02-09","dwjz":"1.5439","gsz":"1.6183","gszzl":"4.82","gztime":"2021-02-10 15:00"})
+        text = response.text
+        if text.startswith('jsonpgz(') and text.endswith(');'):
+            json_str = text[8:-2]  # 去除jsonpgz()
+            fund_data = json.loads(json_str)
+            
+            # 查询基金详细信息
+            # 接口2: 基金详细信息
+            detail_url = f'http://fund.eastmoney.com/pingzhongdata/{code}.js?v={int(time.time() * 1000)}'
+            current_app.logger.info(f"请求天天基金网详细信息API: {detail_url}")
+            
+            detail_response = requests.get(detail_url, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            })
+            
+            fund_type = ""
+            manager = ""
+            found_date = ""
+            company = ""
+            
+            if detail_response.status_code == 200:
+                # 解析基金类型、基金经理等信息
+                detail_text = detail_response.text
+                
+                # 提取基金类型
+                type_match = re.search(r'FTYPE\s*=\s*"([^"]+)"', detail_text)
+                if type_match:
+                    fund_type = type_match.group(1)
+                
+                # 提取基金经理
+                manager_match = re.search(r'FUND_MANAGER\s*=\s*"([^"]+)"', detail_text)
+                if manager_match:
+                    manager = manager_match.group(1)
+                
+                # 提取成立日期
+                found_date_match = re.search(r'ESTABDATE\s*=\s*"([^"]+)"', detail_text)
+                if found_date_match:
+                    found_date = found_date_match.group(1)
+                
+                # 提取基金公司
+                company_match = re.search(r'JJGS\s*=\s*"([^"]+)"', detail_text)
+                if company_match:
+                    company = company_match.group(1)
+            
+            # 构建响应数据
+            result = {
+                'fundcode': fund_data.get('fundcode', ''),
+                'name': fund_data.get('name', ''),
+                'jzrq': fund_data.get('jzrq', ''),  # 净值日期
+                'dwjz': fund_data.get('dwjz', ''),  # 单位净值
+                'gsz': fund_data.get('gsz', ''),    # 估算净值
+                'gszzl': fund_data.get('gszzl', ''), # 估算涨幅
+                'gztime': fund_data.get('gztime', ''), # 估值时间
+                'fund_type': fund_type,
+                'manager': manager,
+                'found_date': found_date,
+                'company': company
+            }
+            
+            # 缓存结果，设置过期时间为10分钟
+            redis_client.setex(
+                cache_key,
+                600,  # 10分钟
+                json.dumps(result)
+            )
+            current_app.logger.info(f"缓存已设置: {cache_key}, 过期时间: 10分钟")
+            
+            response_time = time.time() - start_time
+            current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+            return jsonify(result), 200
+        else:
+            current_app.logger.error(f"天天基金网API返回数据格式错误: {text}")
+            response_time = time.time() - start_time
+            current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+            return jsonify({'message': '天天基金网API返回数据格式错误'}), 500
+    except Exception as e:
+        current_app.logger.error(f"查询天天基金网API失败: {str(e)}")
+        response_time = time.time() - start_time
+        current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+        return jsonify({'message': f'查询天天基金网API失败: {str(e)}'}), 500
+
+
+@funds_bp.route('/sync_from_external/<string:code>', methods=['POST'])
+@jwt_required()
+def sync_from_external(code):
+    """从天天基金网同步基金信息到本地数据库"""
+    start_time = time.time()
+    user_id = get_jwt_identity()
+    current_app.logger.info(f"API调用: 从天天基金网同步基金信息 - 基金代码: {code}, 用户ID: {user_id}")
+    
+    try:
+        # 查询天天基金网API获取基金信息
+        url = f'http://fundgz.1234567.com.cn/js/{code}.js?rt={int(time.time() * 1000)}'
+        current_app.logger.info(f"请求天天基金网API: {url}")
+        
+        response = requests.get(url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        })
+        
+        if response.status_code != 200:
+            current_app.logger.error(f"天天基金网API请求失败: 状态码 {response.status_code}")
+            response_time = time.time() - start_time
+            current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+            return jsonify({'message': '天天基金网API请求失败'}), 500
+        
+        # 解析返回的数据
+        text = response.text
+        if text.startswith('jsonpgz(') and text.endswith(');'):
+            json_str = text[8:-2]  # 去除jsonpgz()
+            fund_data = json.loads(json_str)
+            
+            # 查询基金是否已存在
+            fund = Fund.query.filter_by(code=code).first()
+            
+            if fund:
+                # 更新基金信息
+                fund.name = fund_data.get('name', '')
+                fund.net_value = float(fund_data.get('dwjz', 0))
+                fund.updated_at = time.strftime('%Y-%m-%d %H:%M:%S')
+                current_app.logger.info(f"更新基金信息: {code}")
+            else:
+                # 创建新基金
+                fund = Fund(
+                    code=code,
+                    name=fund_data.get('name', ''),
+                    net_value=float(fund_data.get('dwjz', 0)),
+                    type='未知'  # 可以通过其他API获取更详细的信息
+                )
+                db.session.add(fund)
+                current_app.logger.info(f"创建新基金: {code}")
+            
+            db.session.commit()
+            
+            # 清除相关缓存
+            cache_keys = [
+                f'funds:detail:{code}',
+                f'funds:external:{code}'
+            ]
+            for key in cache_keys:
+                redis_client.delete(key)
+                current_app.logger.info(f"清除缓存: {key}")
+            
+            response_time = time.time() - start_time
+            current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+            return jsonify({'message': f'基金 {code} 同步成功'}), 200
+        else:
+            current_app.logger.error(f"天天基金网API返回数据格式错误: {text}")
+            response_time = time.time() - start_time
+            current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+            return jsonify({'message': '天天基金网API返回数据格式错误'}), 500
+    except Exception as e:
+        current_app.logger.error(f"从天天基金网同步基金信息失败: {str(e)}")
+        response_time = time.time() - start_time
+        current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+        return jsonify({'message': f'从天天基金网同步基金信息失败: {str(e)}'}), 500 
