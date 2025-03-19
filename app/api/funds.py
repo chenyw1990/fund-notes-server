@@ -490,4 +490,101 @@ def sync_from_external(code):
         current_app.logger.error(f"从天天基金网同步基金信息失败: {str(e)}")
         response_time = time.time() - start_time
         current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
-        return jsonify({'message': f'从天天基金网同步基金信息失败: {str(e)}'}), 500 
+        return jsonify({'message': f'从天天基金网同步基金信息失败: {str(e)}'}), 500
+
+
+@funds_bp.route('/sync_all_from_external', methods=['POST'])
+@jwt_required()
+def sync_all_from_external():
+    """从天天基金网同步所有基金列表"""
+    start_time = time.time()
+    user_id = get_jwt_identity()
+    current_app.logger.info(f"API调用: 从天天基金网同步所有基金列表 - 用户ID: {user_id}")
+    
+    try:
+        # 获取天天基金网的基金列表
+        url = 'http://fund.eastmoney.com/js/fundcode_search.js'
+        current_app.logger.info(f"请求天天基金网基金列表API: {url}")
+        
+        response = requests.get(url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        })
+        
+        if response.status_code != 200:
+            current_app.logger.error(f"天天基金网API请求失败: 状态码 {response.status_code}")
+            response_time = time.time() - start_time
+            current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+            return jsonify({'message': '天天基金网API请求失败'}), 500
+        
+        # 解析返回的数据，格式为 var r = [["000001","HXCZHH","华夏成长混合","混合型","HUAXIACHENGZHANGHUNHE"],...];
+        text = response.text
+        if 'var r =' in text:
+            # 提取JSON数组部分
+            json_str = text.split('var r =')[1].strip().rstrip(';')
+            fund_list = json.loads(json_str)
+            
+            # 记录处理的基金数量
+            total_funds = len(fund_list)
+            processed_funds = 0
+            new_funds = 0
+            updated_funds = 0
+            
+            current_app.logger.info(f"获取到 {total_funds} 只基金")
+            
+            # 批量处理基金数据
+            for fund_item in fund_list:
+                code = fund_item[0]  # 基金代码
+                name = fund_item[2]  # 基金名称
+                fund_type = fund_item[3]  # 基金类型
+                
+                # 查询基金是否已存在
+                fund = Fund.query.filter_by(code=code).first()
+                
+                if fund:
+                    # 更新基金信息
+                    fund.name = name
+                    fund.type = fund_type
+                    fund.updated_at = time.strftime('%Y-%m-%d %H:%M:%S')
+                    updated_funds += 1
+                else:
+                    # 创建新基金
+                    fund = Fund(
+                        code=code,
+                        name=name,
+                        type=fund_type
+                    )
+                    db.session.add(fund)
+                    new_funds += 1
+                
+                processed_funds += 1
+                
+                # 每100条记录提交一次，避免事务过大
+                if processed_funds % 100 == 0:
+                    db.session.commit()
+                    current_app.logger.info(f"已处理 {processed_funds}/{total_funds} 只基金")
+            
+            # 提交剩余的记录
+            db.session.commit()
+            
+            # 清除相关缓存
+            redis_client.delete('funds:list:*')
+            current_app.logger.info(f"清除基金列表缓存")
+            
+            response_time = time.time() - start_time
+            current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+            return jsonify({
+                'message': '基金列表同步成功',
+                'total': total_funds,
+                'new': new_funds,
+                'updated': updated_funds
+            }), 200
+        else:
+            current_app.logger.error(f"天天基金网API返回数据格式错误")
+            response_time = time.time() - start_time
+            current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+            return jsonify({'message': '天天基金网API返回数据格式错误'}), 500
+    except Exception as e:
+        current_app.logger.error(f"从天天基金网同步基金列表失败: {str(e)}")
+        response_time = time.time() - start_time
+        current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+        return jsonify({'message': f'从天天基金网同步基金列表失败: {str(e)}'}), 500 

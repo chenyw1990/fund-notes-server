@@ -14,6 +14,7 @@ class User(db.Model):
     avatar = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_admin = db.Column(db.Boolean, default=False)
     
     # 关联关系
     notes = db.relationship('Note', backref='author', lazy='dynamic')
