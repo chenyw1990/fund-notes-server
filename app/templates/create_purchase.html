@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}记录基金购买 - 基金笔记系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="h4 mb-0">记录基金购买</h1>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('web.create_purchase') }}">
+                    <div class="mb-3">
+                        <label for="fund_id" class="form-label">选择基金 <span class="text-danger">*</span></label>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control" id="fund_code_search" placeholder="输入基金代码搜索">
+                            <button class="btn btn-outline-secondary" type="button" id="search_fund_btn">搜索</button>
+                        </div>
+                        <select class="form-select" id="fund_id" name="fund_id" required>
+                            <option value="">-- 请选择基金 --</option>
+                            {% for fund in funds %}
+                                <option value="{{ fund.id }}" data-code="{{ fund.code }}" {% if request.args.get('fund_id')|int == fund.id %}selected{% endif %}>
+                                    {{ fund.name }} ({{ fund.code }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="purchase_date" class="form-label">购买日期 <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="purchase_date" name="purchase_date" value="{{ today_date }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">购买金额 (元) <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" min="0.01" class="form-control" id="amount" name="amount" required>
+                        <div class="form-text">输入您的实际投入金额</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="share" class="form-label">购买份额</label>
+                                <input type="number" step="0.01" min="0" class="form-control" id="share" name="share">
+                                <div class="form-text">如果您不知道具体份额，可以留空</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="price" class="form-label">单位净值</label>
+                                <input type="number" step="0.0001" min="0" class="form-control" id="price" name="price">
+                                <div class="form-text">可选，如果填写份额可自动计算</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="fee" class="form-label">手续费 (元)</label>
+                        <input type="number" step="0.01" min="0" class="form-control" id="fee" name="fee" value="0">
+                        <div class="form-text">基金购买手续费，默认为0</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">备注</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                        <div class="form-text">可选，添加关于这次购买的备注信息</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('web.my_purchases') }}" class="btn btn-secondary">返回列表</a>
+                        <button type="submit" class="btn btn-primary">保存记录</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 自动计算功能
+        const amountInput = document.getElementById('amount');
+        const shareInput = document.getElementById('share');
+        const priceInput = document.getElementById('price');
+        
+        // 当份额和金额都有值时，计算单价
+        function calculatePrice() {
+            const amount = parseFloat(amountInput.value);
+            const share = parseFloat(shareInput.value);
+            if (!isNaN(amount) && !isNaN(share) && share > 0) {
+                priceInput.value = (amount / share).toFixed(4);
+            }
+        }
+        
+        // 当单价和金额都有值时，计算份额
+        function calculateShare() {
+            const amount = parseFloat(amountInput.value);
+            const price = parseFloat(priceInput.value);
+            if (!isNaN(amount) && !isNaN(price) && price > 0) {
+                shareInput.value = (amount / price).toFixed(2);
+            }
+        }
+        
+        // 设置事件监听器
+        shareInput.addEventListener('input', calculatePrice);
+        priceInput.addEventListener('input', calculateShare);
+        amountInput.addEventListener('input', function() {
+            if (shareInput.value) calculatePrice();
+            else if (priceInput.value) calculateShare();
+        });
+
+        // 基金代码搜索功能
+        const fundCodeSearchInput = document.getElementById('fund_code_search');
+        const searchFundBtn = document.getElementById('search_fund_btn');
+        const fundSelect = document.getElementById('fund_id');
+        
+        function searchFundByCode() {
+            const searchCode = fundCodeSearchInput.value.trim();
+            if (!searchCode) return;
+            
+            // 遍历所有选项查找匹配的基金代码
+            let found = false;
+            for (let i = 0; i < fundSelect.options.length; i++) {
+                const option = fundSelect.options[i];
+                const fundCode = option.getAttribute('data-code');
+                
+                if (fundCode && fundCode.includes(searchCode)) {
+                    fundSelect.selectedIndex = i;
+                    found = true;
+                    break;
+                }
+            }
+            
+            if (!found) {
+                alert('未找到基金代码为 ' + searchCode + ' 的基金');
+            }
+        }
+        
+        // 添加搜索按钮点击事件
+        searchFundBtn.addEventListener('click', searchFundByCode);
+        
+        // 添加回车键搜索
+        fundCodeSearchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchFundByCode();
+            }
+        });
+    });
+</script>
+{% endblock %} 

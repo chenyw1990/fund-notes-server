@@ -1,6 +1,6 @@
-# 基金笔记微信小程序后台服务
+# 基金购买记录系统
 
-这是一个名叫基金笔记的基金购买记录的微信小程序的后台服务，使用Python语言，Flask框架，MySQL数据库。
+这是一个基金笔记记录系统，包含微信小程序和Web前端，后台使用Python语言，Flask框架，MySQL数据库。
 
 ## 项目结构
 
@@ -10,8 +10,19 @@ fund-notes-server/
 │   ├── __init__.py         # 应用初始化
 │   ├── config.py           # 配置文件
 │   ├── models/             # 数据模型
+│   │   ├── user.py         # 用户模型
+│   │   ├── fund.py         # 基金模型
+│   │   ├── note.py         # 笔记模型
+│   │   └── purchase.py     # 购买记录模型
 │   ├── api/                # API路由
+│   │   ├── auth.py         # 认证API
+│   │   ├── funds.py        # 基金API
+│   │   ├── notes.py        # 笔记API
+│   │   └── purchases.py    # 购买记录API
+│   ├── web/                # Web前端路由
 │   ├── services/           # 业务逻辑
+│   ├── static/             # 静态资源(CSS, JS, 图片)
+│   ├── templates/          # HTML模板
 │   └── utils/              # 工具函数
 ├── migrations/             # 数据库迁移文件
 ├── .env                    # 环境变量
@@ -70,9 +81,56 @@ python run.py
 - `GET /api/funds`: 获取基金列表
 - `GET /api/funds/<code>`: 获取基金详情
 
+### 购买记录
+- `GET /api/purchases`: 获取用户购买记录
+- `GET /api/purchases/<id>`: 获取单条购买记录
+- `POST /api/purchases`: 创建新购买记录
+- `PUT /api/purchases/<id>`: 更新购买记录
+- `DELETE /api/purchases/<id>`: 删除购买记录
+
+## Web前端
+
+系统提供完整的Web前端界面，支持以下功能：
+
+### 用户功能
+- 用户注册和登录
+- 个人资料管理
+- 密码修改
+
+### 基金功能
+- 浏览基金列表
+- 按类型和关键词筛选基金
+- 查看基金详情
+
+### 笔记功能
+- 浏览所有公开笔记
+- 创建、编辑和删除个人笔记
+- 为笔记添加评分
+- 设置笔记公开或私密状态
+
+### 购买记录功能
+- 记录基金购买信息（金额、份额、单价等）
+- 查看和管理个人购买记录
+- 按基金筛选购买记录
+- 查看购买汇总信息（总投资、总份额、平均成本等）
+- 基金代码快速搜索功能
+
+### 访问方式
+Web前端可通过以下URL访问:
+```
+http://[服务器IP]:5010/
+```
+
 ## 部署
 
 使用Gunicorn作为WSGI服务器:
 ```bash
 gunicorn -w 4 -b 0.0.0.0:5000 run:app
-``` 
+```
+
+## 技术栈
+
+- 后端：Python, Flask, SQLAlchemy, Redis
+- 前端：HTML, CSS, JavaScript, Bootstrap 5
+- 数据库：MySQL
+- 缓存：Redis 

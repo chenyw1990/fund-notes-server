@@ -3,10 +3,16 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 import requests
 import json
+from datetime import datetime
 
 from app.web import web_bp
 from app.extensions import db
-from app.models import User, Fund, Note
+from app.models import User, Fund, Note, Purchase
+
+# 辅助函数
+def get_fund(fund_id):
+    """根据ID获取基金信息"""
+    return Fund.query.get(fund_id)
 
 # Home page
 @web_bp.route('/')
@@ -366,4 +372,179 @@ def delete_note(note_id):
     db.session.commit()
     
     flash('笔记已删除', 'success')
-    return redirect(url_for('web.my_notes')) 
+    return redirect(url_for('web.my_notes'))
+
+# Purchase records management
+@web_bp.route('/purchases')
+@login_required
+def my_purchases():
+    """我的购买记录页面"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    fund_id = request.args.get('fund_id', type=int)
+    
+    # 构建查询
+    query = Purchase.query.filter_by(user_id=current_user.id)
+    
+    # 如果指定了基金ID，则过滤
+    if fund_id:
+        query = query.filter_by(fund_id=fund_id)
+        fund = Fund.query.get(fund_id)
+    else:
+        fund = None
+    
+    # 按购买日期降序排序
+    query = query.order_by(Purchase.purchase_date.desc())
+    
+    # 分页
+    pagination = query.paginate(page=page, per_page=per_page)
+    purchases = pagination.items
+    
+    return render_template('my_purchases.html', 
+                          purchases=purchases, 
+                          pagination=pagination, 
+                          fund_id=fund_id,
+                          fund=fund,
+                          get_fund=get_fund)
+
+@web_bp.route('/purchases/create', methods=['GET', 'POST'])
+@login_required
+def create_purchase():
+    """创建购买记录页面"""
+    if request.method == 'POST':
+        fund_id = request.form.get('fund_id', type=int)
+        amount = request.form.get('amount', type=float)
+        share = request.form.get('share', type=float)
+        price = request.form.get('price', type=float)
+        purchase_date_str = request.form.get('purchase_date')
+        fee = request.form.get('fee', type=float, default=0.0)
+        notes = request.form.get('notes', '')
+        
+        if not fund_id or not amount or not purchase_date_str:
+            flash('请填写所有必填字段', 'danger')
+            funds = Fund.query.order_by(Fund.code).all()
+            today_date = datetime.now().strftime('%Y-%m-%d')
+            return render_template('create_purchase.html', funds=funds, today_date=today_date)
+        
+        # 检查基金是否存在
+        fund = Fund.query.get(fund_id)
+        if not fund:
+            flash('所选基金不存在', 'danger')
+            funds = Fund.query.order_by(Fund.code).all()
+            today_date = datetime.now().strftime('%Y-%m-%d')
+            return render_template('create_purchase.html', funds=funds, today_date=today_date)
+        
+        # 处理日期
+        try:
+            purchase_date = datetime.strptime(purchase_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash('日期格式无效，应为YYYY-MM-DD', 'danger')
+            funds = Fund.query.order_by(Fund.code).all()
+            today_date = datetime.now().strftime('%Y-%m-%d')
+            return render_template('create_purchase.html', funds=funds, today_date=today_date)
+        
+        # 创建购买记录
+        purchase = Purchase(
+            user_id=current_user.id,
+            fund_id=fund_id,
+            amount=amount,
+            share=share,
+            price=price,
+            purchase_date=purchase_date,
+            fee=fee,
+            notes=notes
+        )
+        
+        db.session.add(purchase)
+        db.session.commit()
+        
+        flash('购买记录创建成功！', 'success')
+        return redirect(url_for('web.my_purchases'))
+    
+    # GET请求
+    fund_id = request.args.get('fund_id', type=int)
+    preselected_fund = None
+    
+    if fund_id:
+        preselected_fund = Fund.query.get(fund_id)
+    
+    funds = Fund.query.order_by(Fund.code).all()
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    return render_template('create_purchase.html', funds=funds, preselected_fund=preselected_fund, today_date=today_date)
+
+@web_bp.route('/purchases/<int:purchase_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_purchase(purchase_id):
+    """编辑购买记录页面"""
+    purchase = Purchase.query.get_or_404(purchase_id)
+    
+    # 检查权限
+    if purchase.user_id != current_user.id:
+        abort(403)
+    
+    if request.method == 'POST':
+        fund_id = request.form.get('fund_id', type=int)
+        amount = request.form.get('amount', type=float)
+        share = request.form.get('share', type=float)
+        price = request.form.get('price', type=float)
+        purchase_date_str = request.form.get('purchase_date')
+        fee = request.form.get('fee', type=float, default=0.0)
+        notes = request.form.get('notes', '')
+        
+        if not fund_id or not amount or not purchase_date_str:
+            flash('请填写所有必填字段', 'danger')
+            funds = Fund.query.order_by(Fund.code).all()
+            current_fund = Fund.query.get(purchase.fund_id)
+            return render_template('edit_purchase.html', purchase=purchase, funds=funds, current_fund=current_fund)
+        
+        # 检查基金是否存在
+        fund = Fund.query.get(fund_id)
+        if not fund:
+            flash('所选基金不存在', 'danger')
+            funds = Fund.query.order_by(Fund.code).all()
+            current_fund = Fund.query.get(purchase.fund_id)
+            return render_template('edit_purchase.html', purchase=purchase, funds=funds, current_fund=current_fund)
+        
+        # 处理日期
+        try:
+            purchase_date = datetime.strptime(purchase_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash('日期格式无效，应为YYYY-MM-DD', 'danger')
+            funds = Fund.query.order_by(Fund.code).all()
+            current_fund = Fund.query.get(purchase.fund_id)
+            return render_template('edit_purchase.html', purchase=purchase, funds=funds, current_fund=current_fund)
+        
+        # 更新购买记录
+        purchase.fund_id = fund_id
+        purchase.amount = amount
+        purchase.share = share
+        purchase.price = price
+        purchase.purchase_date = purchase_date
+        purchase.fee = fee
+        purchase.notes = notes
+        
+        db.session.commit()
+        
+        flash('购买记录更新成功！', 'success')
+        return redirect(url_for('web.my_purchases'))
+    
+    # GET请求
+    funds = Fund.query.order_by(Fund.code).all()
+    current_fund = Fund.query.get(purchase.fund_id)
+    return render_template('edit_purchase.html', purchase=purchase, funds=funds, current_fund=current_fund)
+
+@web_bp.route('/purchases/<int:purchase_id>/delete', methods=['POST'])
+@login_required
+def delete_purchase(purchase_id):
+    """删除购买记录"""
+    purchase = Purchase.query.get_or_404(purchase_id)
+    
+    # 检查权限
+    if purchase.user_id != current_user.id:
+        abort(403)
+    
+    db.session.delete(purchase)
+    db.session.commit()
+    
+    flash('购买记录已删除', 'success')
+    return redirect(url_for('web.my_purchases')) 

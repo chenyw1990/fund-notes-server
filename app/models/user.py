@@ -19,6 +19,7 @@ class User(UserMixin, db.Model):
     
     # 关联关系
     notes = db.relationship('Note', backref='author', lazy='dynamic')
+    purchases = db.relationship('Purchase', backref='user', lazy='dynamic')
     
     @property
     def password(self):

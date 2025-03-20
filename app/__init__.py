@@ -16,11 +16,13 @@ def create_app():
     from app.api.auth import auth_bp
     from app.api.notes import notes_bp
     from app.api.funds import funds_bp
+    from app.api.purchases import purchases_bp
     from app.web import web_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(notes_bp, url_prefix='/api/notes')
     app.register_blueprint(funds_bp, url_prefix='/api/funds')
+    app.register_blueprint(purchases_bp, url_prefix='/api/purchases')
     app.register_blueprint(web_bp, url_prefix='')
     
     # 添加模板函数

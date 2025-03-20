@@ -19,6 +19,7 @@ class Fund(db.Model):
     
     # 关联关系
     notes = db.relationship('Note', backref='fund', lazy='dynamic')
+    purchases = db.relationship('Purchase', backref='fund', lazy='dynamic')
     
     def to_dict(self):
         return {
