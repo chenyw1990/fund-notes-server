@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}首页 - 基金笔记系统{% endblock %}
+
+{% block content %}
+<div class="jumbotron bg-light p-5 rounded-3 mb-4">
+    <div class="container py-4">
+        <h1 class="display-4">欢迎使用基金笔记系统</h1>
+        <p class="lead">记录您的基金投资心得，分享基金投资经验，跟踪基金表现。</p>
+        <hr class="my-4">
+        <p>您可以查询基金信息，记录投资笔记，与其他投资者分享您的见解。</p>
+        <div class="mt-4">
+            <a class="btn btn-primary btn-lg" href="{{ url_for('web.funds') }}" role="button">浏览基金</a>
+            <a class="btn btn-outline-primary btn-lg ms-2" href="{{ url_for('web.notes') }}" role="button">查看笔记</a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">最新笔记</h5>
+                <a href="{{ url_for('web.notes') }}" class="btn btn-sm btn-outline-primary">查看全部</a>
+            </div>
+            <div class="card-body">
+                {% if recent_notes %}
+                    {% for note in recent_notes %}
+                        <div class="card note-card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <a href="{{ url_for('web.note_detail', note_id=note.id) }}" class="text-decoration-none">{{ note.title }}</a>
+                                </h5>
+                                <div class="note-meta mb-2">
+                                    {% if note.rating %}
+                                        <span class="rating me-2">
+                                            {% for i in range(note.rating) %}
+                                                <i class="bi bi-star-fill"></i>
+                                            {% endfor %}
+                                            {% for i in range(5 - note.rating) %}
+                                                <i class="bi bi-star"></i>
+                                            {% endfor %}
+                                        </span>
+                                    {% endif %}
+                                    <span class="date">{{ note.created_at.strftime('%Y-%m-%d') }}</span>
+                                </div>
+                                <p class="card-text">{{ note.content|truncate(100) }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a href="{{ url_for('web.note_detail', note_id=note.id) }}" class="btn btn-sm btn-outline-secondary">阅读更多</a>
+                                    {% if note.fund_id %}
+                                        {% set fund = get_fund(note.fund_id) %}
+                                        {% if fund %}
+                                            <a href="{{ url_for('web.fund_detail', code=fund.code) }}" class="text-decoration-none small">
+                                                <span class="badge bg-light text-dark">{{ fund.name }} ({{ fund.code }})</span>
+                                            </a>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-info">目前还没有笔记，快来创建第一篇吧！</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-5">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">热门基金</h5>
+                <a href="{{ url_for('web.funds') }}" class="btn btn-sm btn-outline-primary">查看全部</a>
+            </div>
+            <div class="card-body">
+                {% if popular_funds %}
+                    <div class="list-group">
+                        {% for fund in popular_funds %}
+                            <a href="{{ url_for('web.fund_detail', code=fund.code) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ fund.name }}</h6>
+                                    <small class="text-muted">{{ fund.code }}</small>
+                                </div>
+                                <small>{{ fund.type or '未分类' }} | {{ fund.company or '未知' }}</small>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">暂无基金数据</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">快速搜索</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('web.funds') }}" method="get" id="search-form">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" placeholder="输入基金代码或名称" name="keyword" id="search-input">
+                        <button class="btn btn-primary" type="submit">搜索</button>
+                    </div>
+                </form>
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('web.funds') }}" class="btn btn-sm btn-outline-secondary">高级筛选</a>
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('web.create_note') }}" class="btn btn-sm btn-success ms-2">创建笔记</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}基金列表 - 基金笔记系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">基金列表</h1>
+    <div>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('web.create_note') }}" class="btn btn-success">创建笔记</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form action="{{ url_for('web.funds') }}" method="get" id="search-form">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="输入基金代码或名称" name="keyword" id="search-input" value="{{ keyword }}">
+                        <button class="btn btn-primary" type="submit">搜索</button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" name="type" onchange="this.form.submit()">
+                        <option value="">全部类型</option>
+                        {% for type in fund_types %}
+                            <option value="{{ type }}" {% if fund_type == type %}selected{% endif %}>{{ type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <a href="{{ url_for('web.funds') }}" class="btn btn-outline-secondary w-100">重置</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if funds %}
+    <div class="row">
+        {% for fund in funds %}
+            <div class="col-lg-3 col-md-4 col-sm-6">
+                <div class="card fund-card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ fund.name }}</h5>
+                        <div class="fund-code mb-2">{{ fund.code }}</div>
+                        <p class="card-text small mb-2">类型: {{ fund.type or '未分类' }}</p>
+                        <p class="card-text small mb-2">管理公司: {{ fund.company or '未知' }}</p>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <a href="{{ url_for('web.fund_detail', code=fund.code) }}" class="btn btn-sm btn-primary">查看详情</a>
+                            {% if current_user.is_authenticated %}
+                                <a href="{{ url_for('web.create_note', fund_id=fund.id) }}" class="btn btn-sm btn-outline-secondary">写笔记</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <nav aria-label="页码导航">
+        <ul class="pagination justify-content-center">
+            {% if pagination.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('web.funds', page=pagination.prev_num, keyword=keyword, type=fund_type) }}">上一页</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">上一页</span>
+                </li>
+            {% endif %}
+
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    {% if page_num == pagination.page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                    {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('web.funds', page=page_num, keyword=keyword, type=fund_type) }}">{{ page_num }}</a>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('web.funds', page=pagination.next_num, keyword=keyword, type=fund_type) }}">下一页</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">下一页</span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+{% else %}
+    <div class="alert alert-info">
+        没有找到符合条件的基金。
+    </div>
+{% endif %}
+
+{% endblock %} 

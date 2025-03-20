@@ -1,8 +1,9 @@
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.extensions import db
+from flask_login import UserMixin
+from app.extensions import db, login_manager
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     """用户模型"""
     __tablename__ = 'users'
     
@@ -38,4 +39,9 @@ class User(db.Model):
             'avatar': self.avatar,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
-        } 
+        }
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Flask-Login需要的用户加载函数"""
+    return User.query.get(int(user_id)) 

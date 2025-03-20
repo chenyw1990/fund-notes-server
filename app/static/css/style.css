@@ -1,0 +1,91 @@
+/* General Styles */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+footer {
+    margin-top: auto;
+}
+
+/* Card Styles */
+.card {
+    transition: transform 0.3s ease;
+    margin-bottom: 20px;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+/* Fund Card */
+.fund-card .card-body {
+    padding: 1.25rem;
+}
+
+.fund-card .card-title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.fund-card .fund-code {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+}
+
+/* Note Card */
+.note-card .card-title {
+    font-weight: 600;
+}
+
+.note-card .note-meta {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.note-card .rating {
+    color: #ffc107;
+}
+
+/* Forms */
+.auth-form {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+/* Pagination */
+.pagination {
+    justify-content: center;
+    margin-top: 30px;
+}
+
+/* Fund Detail */
+.fund-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.fund-info-item {
+    margin-bottom: 0.5rem;
+}
+
+.fund-info-label {
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-columns {
+        column-count: 1;
+    }
+} 

@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}我的笔记 - 基金笔记系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">我的笔记</h1>
+    <div>
+        <a href="{{ url_for('web.create_note') }}" class="btn btn-success">创建笔记</a>
+    </div>
+</div>
+
+{% if notes %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>标题</th>
+                    <th>相关基金</th>
+                    <th>评分</th>
+                    <th>状态</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for note in notes %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('web.note_detail', note_id=note.id) }}">{{ note.title }}</a>
+                        </td>
+                        <td>
+                            {% if note.fund_id %}
+                                {% set fund = get_fund(note.fund_id) %}
+                                {% if fund %}
+                                    <a href="{{ url_for('web.fund_detail', code=fund.code) }}">{{ fund.name }}</a>
+                                    <span class="text-muted">({{ fund.code }})</span>
+                                {% else %}
+                                    <span class="text-muted">未知</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if note.rating %}
+                                <span class="rating">
+                                    {% for i in range(note.rating) %}
+                                        <i class="bi bi-star-fill"></i>
+                                    {% endfor %}
+                                    {% for i in range(5 - note.rating) %}
+                                        <i class="bi bi-star"></i>
+                                    {% endfor %}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">无评分</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if note.is_public %}
+                                <span class="badge bg-success">公开</span>
+                            {% else %}
+                                <span class="badge bg-secondary">私密</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ note.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('web.edit_note', note_id=note.id) }}" class="btn btn-outline-primary">编辑</a>
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteNoteModal{{ note.id }}">删除</button>
+                            </div>
+                            
+                            <!-- Delete Modal -->
+                            <div class="modal fade" id="deleteNoteModal{{ note.id }}" tabindex="-1" aria-labelledby="deleteNoteModalLabel{{ note.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="deleteNoteModalLabel{{ note.id }}">确认删除</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>确定要删除笔记 "{{ note.title }}" 吗？此操作不可恢复。</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                            <form action="{{ url_for('web.delete_note', note_id=note.id) }}" method="post">
+                                                <button type="submit" class="btn btn-danger" data-action="delete">确认删除</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <nav aria-label="页码导航">
+        <ul class="pagination justify-content-center">
+            {% if pagination.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('web.my_notes', page=pagination.prev_num) }}">上一页</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">上一页</span>
+                </li>
+            {% endif %}
+
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    {% if page_num == pagination.page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                    {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('web.my_notes', page=page_num) }}">{{ page_num }}</a>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('web.my_notes', page=pagination.next_num) }}">下一页</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">下一页</span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+{% else %}
+    <div class="alert alert-info">
+        您还没有创建任何笔记。<a href="{{ url_for('web.create_note') }}">立即创建</a>
+    </div>
+{% endif %}
+{% endblock %} 

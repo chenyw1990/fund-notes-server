@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}个人资料 - 基金笔记系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">个人信息</h5>
+            </div>
+            <div class="card-body text-center">
+                <img src="{{ current_user.avatar or url_for('static', filename='img/default-avatar.png') }}" alt="头像" class="rounded-circle mb-3" width="100" height="100">
+                <h5>{{ current_user.username }}</h5>
+                <p class="text-muted">{{ current_user.email }}</p>
+                <p class="small text-muted">注册时间：{{ current_user.created_at.strftime('%Y-%m-%d') }}</p>
+                <div class="d-grid">
+                    <a href="{{ url_for('web.my_notes') }}" class="btn btn-outline-primary">我的笔记</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">编辑个人资料</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('web.profile') }}">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="username" name="username" value="{{ current_user.username }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">电子邮箱</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="avatar" class="form-label">头像URL</label>
+                        <input type="url" class="form-control" id="avatar" name="avatar" value="{{ current_user.avatar }}">
+                        <div class="form-text">输入头像图片的URL地址。</div>
+                    </div>
+                    
+                    <hr>
+                    <h5>修改密码</h5>
+                    <p class="text-muted small mb-3">如果不需要修改密码，请留空以下字段。</p>
+                    
+                    <div class="mb-3">
+                        <label for="current_password" class="form-label">当前密码</label>
+                        <input type="password" class="form-control" id="current_password" name="current_password">
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_password" class="form-label">新密码</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password">
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">确认新密码</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">保存修改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

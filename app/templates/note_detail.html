@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ note.title }} - 基金笔记系统{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('web.notes') }}">笔记列表</a></li>
+            {% if fund %}
+                <li class="breadcrumb-item"><a href="{{ url_for('web.fund_detail', code=fund.code) }}">{{ fund.name }}</a></li>
+            {% endif %}
+            <li class="breadcrumb-item active" aria-current="page">{{ note.title }}</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <h1 class="h2 mb-0">{{ note.title }}</h1>
+            
+            {% if current_user.is_authenticated and current_user.id == note.user_id %}
+            <div class="btn-group">
+                <a href="{{ url_for('web.edit_note', note_id=note.id) }}" class="btn btn-sm btn-outline-primary">编辑</a>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteNoteModal">删除</button>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="note-meta mb-4">
+            {% if note.rating %}
+                <div class="rating mb-2">
+                    {% for i in range(note.rating) %}
+                        <i class="bi bi-star-fill text-warning"></i>
+                    {% endfor %}
+                    {% for i in range(5 - note.rating) %}
+                        <i class="bi bi-star text-warning"></i>
+                    {% endfor %}
+                    <span class="ms-1 text-muted">{{ note.rating }}/5 分</span>
+                </div>
+            {% endif %}
+            
+            <div class="d-flex flex-wrap gap-3">
+                {% if author %}
+                    <span>
+                        <i class="bi bi-person"></i>
+                        <span>{{ author.username }}</span>
+                    </span>
+                {% endif %}
+                
+                <span>
+                    <i class="bi bi-calendar3"></i>
+                    <span>{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </span>
+                
+                {% if fund %}
+                    <span>
+                        <i class="bi bi-bar-chart-fill"></i>
+                        <a href="{{ url_for('web.fund_detail', code=fund.code) }}" class="text-decoration-none">
+                            {{ fund.name }} ({{ fund.code }})
+                        </a>
+                    </span>
+                {% endif %}
+                
+                <span>
+                    <i class="bi bi-eye"></i>
+                    <span>{{ note.is_public and '公开' or '私密' }}</span>
+                </span>
+            </div>
+        </div>
+        
+        <div class="note-content mb-4">
+            <div class="p-3 bg-light rounded">
+                {{ note.content|nl2br }}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if related_notes %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">相关笔记</h5>
+    </div>
+    <div class="card-body">
+        <div class="list-group">
+            {% for related in related_notes %}
+                <a href="{{ url_for('web.note_detail', note_id=related.id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ related.title }}</h6>
+                        <small>{{ related.created_at.strftime('%Y-%m-%d') }}</small>
+                    </div>
+                    <p class="mb-1 small">{{ related.content|truncate(80) }}</p>
+                    {% if related.rating %}
+                        <small class="rating">
+                            {% for i in range(related.rating) %}
+                                <i class="bi bi-star-fill text-warning"></i>
+                            {% endfor %}
+                            {% for i in range(5 - related.rating) %}
+                                <i class="bi bi-star text-warning"></i>
+                            {% endfor %}
+                        </small>
+                    {% endif %}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Delete Note Modal -->
+{% if current_user.is_authenticated and current_user.id == note.user_id %}
+<div class="modal fade" id="deleteNoteModal" tabindex="-1" aria-labelledby="deleteNoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteNoteModalLabel">确认删除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>确定要删除笔记 "{{ note.title }}" 吗？此操作不可恢复。</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <form action="{{ url_for('web.delete_note', note_id=note.id) }}" method="post">
+                    <button type="submit" class="btn btn-danger" data-action="delete">确认删除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %} 

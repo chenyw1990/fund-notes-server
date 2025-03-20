@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ fund.name }} ({{ fund.code }}) - 基金笔记系统{% endblock %}
+
+{% block content %}
+<div class="fund-header">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h1 class="h2 mb-1">{{ fund.name }}</h1>
+            <p class="text-muted mb-2">{{ fund.code }}</p>
+        </div>
+        <div>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('web.create_note', fund_id=fund.id) }}" class="btn btn-success">写笔记</a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">基金信息</h5>
+                </div>
+                <div class="card-body">
+                    <div class="fund-info-item">
+                        <span class="fund-info-label">基金类型:</span>
+                        <span>{{ fund.type or '未知' }}</span>
+                    </div>
+                    <div class="fund-info-item">
+                        <span class="fund-info-label">管理公司:</span>
+                        <span>{{ fund.company or '未知' }}</span>
+                    </div>
+                    <div class="fund-info-item">
+                        <span class="fund-info-label">基金经理:</span>
+                        <span>{{ fund.manager or '未知' }}</span>
+                    </div>
+                    <div class="fund-info-item">
+                        <span class="fund-info-label">成立日期:</span>
+                        <span>{{ fund.inception_date or '未知' }}</span>
+                    </div>
+                    <div class="fund-info-item">
+                        <span class="fund-info-label">规模:</span>
+                        <span>{{ fund.size }}亿元</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">基金简介</h5>
+                </div>
+                <div class="card-body">
+                    {% if fund.description %}
+                        <p>{{ fund.description }}</p>
+                    {% else %}
+                        <p class="text-muted">暂无简介信息</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="fund-notes">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>相关笔记</h3>
+    </div>
+    
+    {% if notes %}
+        <div class="row">
+            {% for note in notes %}
+                <div class="col-md-6">
+                    <div class="card note-card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a href="{{ url_for('web.note_detail', note_id=note.id) }}" class="text-decoration-none">{{ note.title }}</a>
+                            </h5>
+                            <div class="note-meta mb-2">
+                                {% if note.rating %}
+                                    <span class="rating me-2">
+                                        {% for i in range(note.rating) %}
+                                            <i class="bi bi-star-fill"></i>
+                                        {% endfor %}
+                                        {% for i in range(5 - note.rating) %}
+                                            <i class="bi bi-star"></i>
+                                        {% endfor %}
+                                    </span>
+                                {% endif %}
+                                <span class="date">{{ note.created_at.strftime('%Y-%m-%d') }}</span>
+                                
+                                {% if note.user_id %}
+                                    {% set author = get_user(note.user_id) %}
+                                    {% if author %}
+                                        <span class="mx-1">|</span>
+                                        <span class="author">{{ author.username }}</span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <p class="card-text">{{ note.content|truncate(150) }}</p>
+                            <div class="text-end">
+                                <a href="{{ url_for('web.note_detail', note_id=note.id) }}" class="btn btn-sm btn-outline-primary">阅读全文</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if pagination.pages > 1 %}
+        <nav aria-label="页码导航">
+            <ul class="pagination justify-content-center">
+                {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('web.fund_detail', code=fund.code, page=pagination.prev_num) }}">上一页</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">上一页</span>
+                    </li>
+                {% endif %}
+
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num == pagination.page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('web.fund_detail', code=fund.code, page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('web.fund_detail', code=fund.code, page=pagination.next_num) }}">下一页</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">下一页</span>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info">
+            目前还没有关于此基金的笔记，
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('web.create_note', fund_id=fund.id) }}">创建第一篇</a>吧！
+            {% else %}
+                <a href="{{ url_for('web.login') }}">登录</a>后可以创建笔记。
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %} 

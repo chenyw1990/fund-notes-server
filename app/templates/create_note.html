@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}创建笔记 - 基金笔记系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">创建笔记</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('web.create_note') }}">
+                    <div class="mb-3">
+                        <label for="fund_id" class="form-label">相关基金 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="fund_id" name="fund_id" required>
+                            <option value="">选择基金</option>
+                            {% for fund in funds %}
+                                <option value="{{ fund.id }}" {% if preselected_fund and preselected_fund.id == fund.id %}selected{% endif %}>
+                                    {{ fund.name }} ({{ fund.code }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="title" class="form-label">标题 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="content" class="form-label">内容 <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="content" name="content" rows="10" required></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">评分</label>
+                        <div class="rating-input">
+                            <div class="d-flex align-items-center">
+                                {% for i in range(1, 6) %}
+                                <div class="me-3">
+                                    <span class="star" role="button">
+                                        <i class="bi bi-star fs-3"></i>
+                                    </span>
+                                </div>
+                                {% endfor %}
+                                <input type="hidden" name="rating" value="">
+                                <span class="ms-3 text-muted">点击星星进行评分</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="is_public" name="is_public" checked>
+                        <label class="form-check-label" for="is_public">公开笔记（其他用户可以看到）</label>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="javascript:history.back()" class="btn btn-outline-secondary">返回</a>
+                        <button type="submit" class="btn btn-primary">保存笔记</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+    .rating-input .star {
+        cursor: pointer;
+    }
+    .rating-input .star i.bi-star-fill {
+        color: #ffc107;
+    }
+    .rating-input .star i.bi-star {
+        color: #ccc;
+    }
+    .rating-input .star.active i.bi-star {
+        content: "\F588";
+        color: #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ratingInput = document.querySelector('.rating-input');
+    const stars = ratingInput.querySelectorAll('.star');
+    const ratingValue = ratingInput.querySelector('input[type="hidden"]');
+    
+    stars.forEach((star, index) => {
+        star.addEventListener('click', () => {
+            const value = index + 1;
+            ratingValue.value = value;
+            
+            // Update UI
+            stars.forEach((s, i) => {
+                const icon = s.querySelector('i');
+                if (i < value) {
+                    icon.classList.remove('bi-star');
+                    icon.classList.add('bi-star-fill');
+                } else {
+                    icon.classList.remove('bi-star-fill');
+                    icon.classList.add('bi-star');
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %} 
