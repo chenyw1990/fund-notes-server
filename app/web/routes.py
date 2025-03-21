@@ -413,6 +413,7 @@ def create_purchase():
     """创建购买记录页面"""
     if request.method == 'POST':
         fund_id = request.form.get('fund_id', type=int)
+        fund_code = request.form.get('fund_code', '')
         amount = request.form.get('amount', type=float)
         share = request.form.get('share', type=float)
         price = request.form.get('price', type=float)
@@ -484,6 +485,7 @@ def edit_purchase(purchase_id):
     
     if request.method == 'POST':
         fund_id = request.form.get('fund_id', type=int)
+        fund_code = request.form.get('fund_code', '')
         amount = request.form.get('amount', type=float)
         share = request.form.get('share', type=float)
         price = request.form.get('price', type=float)

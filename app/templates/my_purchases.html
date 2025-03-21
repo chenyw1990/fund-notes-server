@@ -27,12 +27,10 @@
                 <div class="card bg-light">
                     <div class="card-body text-center">
                         <h6 class="card-title text-muted">总投资</h6>
-                        <h3 class="mb-0">
-                            {% set total_amount = 0 %}
-                            {% for p in purchases %}
-                                {% set total_amount = total_amount + p.amount %}
-                            {% endfor %}
-                            {{ "%.2f"|format(total_amount) }} <small>元</small>
+                        <h3 class="mb-0" id="total-investment">
+                            <!-- JavaScript将在页面加载后计算并填充此值 -->
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            计算中...
                         </h3>
                     </div>
                 </div>
@@ -41,14 +39,10 @@
                 <div class="card bg-light">
                     <div class="card-body text-center">
                         <h6 class="card-title text-muted">总份额</h6>
-                        <h3 class="mb-0">
-                            {% set total_shares = 0 %}
-                            {% for p in purchases %}
-                                {% if p.share %}
-                                    {% set total_shares = total_shares + p.share %}
-                                {% endif %}
-                            {% endfor %}
-                            {{ "%.2f"|format(total_shares) }}
+                        <h3 class="mb-0" id="total-shares">
+                            <!-- JavaScript将在页面加载后计算并填充此值 -->
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            计算中...
                         </h3>
                     </div>
                 </div>
@@ -57,12 +51,10 @@
                 <div class="card bg-light">
                     <div class="card-body text-center">
                         <h6 class="card-title text-muted">平均成本</h6>
-                        <h3 class="mb-0">
-                            {% if total_shares > 0 %}
-                                {{ "%.4f"|format(total_amount / total_shares) }}
-                            {% else %}
-                                -
-                            {% endif %}
+                        <h3 class="mb-0" id="average-cost">
+                            <!-- JavaScript将在页面加载后计算并填充此值 -->
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            计算中...
                         </h3>
                     </div>
                 </div>
@@ -195,4 +187,55 @@
         您还没有记录任何购买记录。<a href="{{ url_for('web.create_purchase') }}">立即添加</a>
     </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 获取所有购买记录的数据
+        const purchaseData = [
+            {% for purchase in purchases %}
+                {
+                    id: {{ purchase.id }},
+                    amount: {{ purchase.amount|float }},
+                    share: {{ purchase.share|float if purchase.share else 0 }},
+                    price: {{ purchase.price|float if purchase.price else 0 }}
+                },
+            {% endfor %}
+        ];
+        
+        // 计算总投资金额
+        let totalAmount = 0;
+        purchaseData.forEach(function(purchase) {
+            if (purchase.amount) {
+                totalAmount += purchase.amount;
+            }
+        });
+        
+        // 显示总投资金额
+        const totalInvestmentElement = document.getElementById('total-investment');
+        totalInvestmentElement.innerHTML = totalAmount.toFixed(2) + ' <small>元</small>';
+        
+        // 计算总份额
+        let totalShares = 0;
+        purchaseData.forEach(function(purchase) {
+            if (purchase.share) {
+                totalShares += purchase.share;
+            }
+        });
+        
+        // 显示总份额
+        const totalSharesElement = document.getElementById('total-shares');
+        totalSharesElement.innerHTML = totalShares.toFixed(2);
+        
+        // 计算并显示平均成本
+        const averageCostElement = document.getElementById('average-cost');
+        if (totalShares > 0) {
+            const averageCost = totalAmount / totalShares;
+            averageCostElement.textContent = averageCost.toFixed(4);
+        } else {
+            averageCostElement.textContent = '-';
+        }
+    });
+</script>
 {% endblock %} 

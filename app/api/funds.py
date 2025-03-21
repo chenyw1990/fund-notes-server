@@ -587,4 +587,68 @@ def sync_all_from_external():
         current_app.logger.error(f"从天天基金网同步基金列表失败: {str(e)}")
         response_time = time.time() - start_time
         current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
-        return jsonify({'message': f'从天天基金网同步基金列表失败: {str(e)}'}), 500 
+        return jsonify({'message': f'从天天基金网同步基金列表失败: {str(e)}'}), 500
+
+
+@funds_bp.route('/search/<code>', methods=['GET'])
+def search_fund(code):
+    """根据基金代码搜索基金信息（优先从数据库查询，没有则从天天基金网获取）"""
+    # 检查基金代码格式
+    if not re.match(r'^\d{6}$', code):
+        return jsonify({"error": "基金代码必须是6位数字"}), 400
+    
+    # 首先尝试从数据库中查找
+    fund = Fund.query.filter_by(code=code).first()
+    
+    if fund:
+        # 如果数据库中已有该基金，直接返回信息
+        return jsonify({
+            "success": True,
+            "source": "database",
+            "fund": {
+                "id": fund.id,
+                "code": fund.code,
+                "name": fund.name,
+                "type": fund.type
+            }
+        })
+    
+    # 如果数据库中没有，则从天天基金网API获取
+    try:
+        # 从天天基金网获取基金信息
+        url = f"http://fundgz.1234567.com.cn/js/{code}.js"
+        response = requests.get(url, timeout=5)
+        
+        # 天天基金返回的是一个JavaScript回调，需要提取JSON部分
+        if response.status_code == 200 and "jsonpgz" in response.text:
+            # 提取JSON数据
+            json_str = re.search(r'jsonpgz\((.*?)\)', response.text).group(1)
+            import json
+            fund_data = json.loads(json_str)
+            
+            # 创建新的基金记录
+            new_fund = Fund(
+                code=fund_data.get('fundcode'),
+                name=fund_data.get('name'),
+                type=fund_data.get('dwjz') and '股票型' or '未知'  # 默认分类
+            )
+            
+            # 保存到数据库
+            db.session.add(new_fund)
+            db.session.commit()
+            
+            return jsonify({
+                "success": True,
+                "source": "eastmoney",
+                "fund": {
+                    "id": new_fund.id,
+                    "code": new_fund.code,
+                    "name": new_fund.name,
+                    "type": new_fund.type
+                }
+            })
+        else:
+            return jsonify({"success": False, "error": "未找到该基金信息"}), 404
+            
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500 

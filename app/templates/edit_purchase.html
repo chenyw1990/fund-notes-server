@@ -12,19 +12,22 @@
             <div class="card-body">
                 <form method="post" action="{{ url_for('web.edit_purchase', purchase_id=purchase.id) }}">
                     <div class="mb-3">
-                        <label for="fund_id" class="form-label">基金 <span class="text-danger">*</span></label>
-                        <div class="input-group mb-2">
-                            <input type="text" class="form-control" id="fund_code_search" placeholder="输入基金代码搜索">
-                            <button class="btn btn-outline-secondary" type="button" id="search_fund_btn">搜索</button>
+                        <label for="fund_code" class="form-label">基金编码 <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="fund_code" name="fund_code" placeholder="输入6位基金代码" required 
+                                   {% if current_fund %}value="{{ current_fund.code }}"{% endif %}>
+                            <button class="btn btn-outline-primary" type="button" id="search_fund_btn">查找</button>
                         </div>
-                        <select class="form-select" id="fund_id" name="fund_id" required>
-                            <option value="">-- 请选择基金 --</option>
-                            {% for fund in funds %}
-                                <option value="{{ fund.id }}" data-code="{{ fund.code }}" {% if purchase.fund_id == fund.id %}selected{% endif %}>
-                                    {{ fund.name }} ({{ fund.code }})
-                                </option>
-                            {% endfor %}
-                        </select>
+                        <div class="form-text" id="fund_info">输入基金代码后点击查找按钮</div>
+                        <input type="hidden" id="fund_id" name="fund_id" 
+                               {% if current_fund %}value="{{ current_fund.id }}"{% else %}value="{{ purchase.fund_id }}"{% endif %} required>
+                    </div>
+
+                    <div class="mb-3" id="fund_name_display" style="{% if not current_fund %}display:none;{% endif %}">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 
+                            已选择: <strong id="selected_fund_name">{% if current_fund %}{{ current_fund.name }}{% endif %}</strong>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -144,43 +147,120 @@
             else if (priceInput.value) calculateShare();
         });
 
-        // 基金代码搜索功能
-        const fundCodeSearchInput = document.getElementById('fund_code_search');
+        // 基金查找功能
+        const fundCodeInput = document.getElementById('fund_code');
+        const fundIdInput = document.getElementById('fund_id');
+        const fundInfoText = document.getElementById('fund_info');
         const searchFundBtn = document.getElementById('search_fund_btn');
-        const fundSelect = document.getElementById('fund_id');
+        const fundNameDisplay = document.getElementById('fund_name_display');
+        const selectedFundName = document.getElementById('selected_fund_name');
         
-        function searchFundByCode() {
-            const searchCode = fundCodeSearchInput.value.trim();
-            if (!searchCode) return;
-            
-            // 遍历所有选项查找匹配的基金代码
-            let found = false;
-            for (let i = 0; i < fundSelect.options.length; i++) {
-                const option = fundSelect.options[i];
-                const fundCode = option.getAttribute('data-code');
-                
-                if (fundCode && fundCode.includes(searchCode)) {
-                    fundSelect.selectedIndex = i;
-                    found = true;
-                    break;
-                }
+        // 从本地数据查找基金
+        const fundsLocal = [
+            {% for fund in funds %}
+                {id: {{ fund.id }}, code: "{{ fund.code }}", name: "{{ fund.name }}"},
+            {% endfor %}
+        ];
+        
+        // 查找基金函数 - 通过API
+        async function searchFund() {
+            const code = fundCodeInput.value.trim();
+            if (code.length !== 6 || !/^\d+$/.test(code)) {
+                fundInfoText.textContent = "请输入完整的6位基金代码";
+                fundInfoText.className = "form-text text-danger";
+                fundIdInput.value = "";
+                fundNameDisplay.style.display = "none";
+                return;
             }
             
-            if (!found) {
-                alert('未找到基金代码为 ' + searchCode + ' 的基金');
+            // 显示加载状态
+            searchFundBtn.disabled = true;
+            searchFundBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 搜索中...';
+            fundInfoText.textContent = "正在查询基金信息...";
+            fundInfoText.className = "form-text text-info";
+            
+            try {
+                // 首先尝试从本地数据中查找
+                const localFund = fundsLocal.find(f => f.code === code);
+                if (localFund) {
+                    // 本地找到了基金
+                    fundIdInput.value = localFund.id;
+                    selectedFundName.textContent = `${localFund.name} (${localFund.code})`;
+                    fundNameDisplay.style.display = "block";
+                    fundInfoText.textContent = "基金已找到 (本地数据)";
+                    fundInfoText.className = "form-text text-success";
+                } else {
+                    // 通过API从天天基金网查询
+                    const response = await fetch(`/api/funds/search/${code}`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // API找到了基金
+                        fundIdInput.value = data.fund.id;
+                        selectedFundName.textContent = `${data.fund.name} (${data.fund.code})`;
+                        fundNameDisplay.style.display = "block";
+                        fundInfoText.textContent = `基金已找到 (${data.source === 'database' ? '数据库' : '天天基金网'})`;
+                        fundInfoText.className = "form-text text-success";
+                        
+                        // 如果是新基金，添加到本地列表中
+                        if (data.source === 'eastmoney') {
+                            fundsLocal.push({
+                                id: data.fund.id,
+                                code: data.fund.code,
+                                name: data.fund.name
+                            });
+                        }
+                    } else {
+                        // API没有找到基金
+                        fundInfoText.textContent = data.error || "未找到该基金代码，请确认后重试";
+                        fundInfoText.className = "form-text text-danger";
+                        fundIdInput.value = "";
+                        fundNameDisplay.style.display = "none";
+                    }
+                }
+            } catch (error) {
+                // 网络错误或其他异常
+                fundInfoText.textContent = "查询失败，请检查网络连接后重试";
+                fundInfoText.className = "form-text text-danger";
+                fundIdInput.value = "";
+                fundNameDisplay.style.display = "none";
+                console.error("查询基金信息出错:", error);
+            } finally {
+                // 恢复按钮状态
+                searchFundBtn.disabled = false;
+                searchFundBtn.innerHTML = '查找';
             }
         }
         
         // 添加搜索按钮点击事件
-        searchFundBtn.addEventListener('click', searchFundByCode);
+        searchFundBtn.addEventListener('click', searchFund);
         
         // 添加回车键搜索
-        fundCodeSearchInput.addEventListener('keypress', function(e) {
+        fundCodeInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                searchFundByCode();
+                searchFund();
             }
         });
+        
+        // 表单提交前验证
+        document.querySelector('form').addEventListener('submit', function(e) {
+            if (!fundIdInput.value) {
+                e.preventDefault();
+                alert('请先查找并选择有效的基金');
+                fundCodeInput.focus();
+            }
+        });
+
+        // 初始化显示当前基金名称
+        if (fundIdInput.value) {
+            const fund = fundsLocal.find(f => f.id == fundIdInput.value);
+            if (fund) {
+                fundCodeInput.value = fund.code;
+                selectedFundName.textContent = `${fund.name} (${fund.code})`;
+                fundNameDisplay.style.display = "block";
+            }
+        }
     });
 </script>
 {% endblock %} 
