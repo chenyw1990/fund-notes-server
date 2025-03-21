@@ -157,13 +157,13 @@ gunicorn -w 4 -b 0.0.0.0:5000 run:app
 可以使用提供的命令行脚本手动更新基金净值数据：
 
 ```bash
-# 更新所有基金的净值数据
+# 更新所有基金的全部历史净值数据（从成立日至今）
 python update_fund_values.py
 
-# 更新指定基金的净值数据
+# 更新指定基金的全部历史净值数据
 python update_fund_values.py -c 000001
 
-# 更新最近30天的净值数据
+# 仅更新最近30天的净值数据
 python update_fund_values.py -d 30
 
 # 更新指定日期范围的净值数据

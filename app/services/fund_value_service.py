@@ -36,14 +36,22 @@ def fetch_fund_value(fund_code=None, start_date=None, end_date=None):
         try:
             logger.info(f"Fetching fund value data for {fund.code} - {fund.name}")
             
-            # 如果没有提供日期范围，默认获取最近30天的数据
-            if not start_date:
-                end = datetime.now().date() if not end_date else datetime.strptime(end_date, '%Y-%m-%d').date()
-                start = end - timedelta(days=30)
-                start_date = start.strftime('%Y-%m-%d')
-            
+            # 如果没有提供日期范围，默认获取从基金成立至今的所有数据
             if not end_date:
                 end_date = datetime.now().date().strftime('%Y-%m-%d')
+            
+            if not start_date:
+                # 尝试获取基金的成立日期，如果没有则默认获取最近一年的数据
+                if hasattr(fund, 'inception_date') and fund.inception_date:
+                    start_date = fund.inception_date.strftime('%Y-%m-%d')
+                else:
+                    # 如果没有成立日期信息，默认获取近2000天（约5.5年）的数据
+                    # 天天基金API通常最多返回约2000条记录
+                    end = datetime.strptime(end_date, '%Y-%m-%d').date()
+                    start = end - timedelta(days=2000)
+                    start_date = start.strftime('%Y-%m-%d')
+            
+            logger.info(f"Fetching data from {start_date} to {end_date}")
             
             # 调用天天基金网API获取数据
             values = fetch_eastmoney_fund_data(fund.code, start_date, end_date)
@@ -110,22 +118,12 @@ def fetch_eastmoney_fund_data(fund_code, start_date=None, end_date=None):
     """
     try:
         # 构建API URL
-        page_index = 1
-        page_size = 50  # 每页记录数，可根据需要调整
-        
         api_url = "https://api.fund.eastmoney.com/f10/lsjz"
-        params = {
-            'fundCode': fund_code,
-            'pageIndex': page_index,
-            'pageSize': page_size,
-        }
         
-        if start_date:
-            params['startDate'] = start_date
-        if end_date:
-            params['endDate'] = end_date
+        # 设置较大的页面大小，减少请求次数
+        page_size = 50  # 天天基金API单页最大记录数
         
-        # 添加请求头以模拟浏览器行为
+        # 设置请求头以模拟浏览器行为
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
             'Referer': 'http://fund.eastmoney.com/',
@@ -134,54 +132,81 @@ def fetch_eastmoney_fund_data(fund_code, start_date=None, end_date=None):
             'Connection': 'keep-alive',
         }
         
+        # 首先获取第一页，了解总页数和记录数
+        params = {
+            'fundCode': fund_code,
+            'pageIndex': 1,
+            'pageSize': page_size,
+        }
+        
+        if start_date:
+            params['startDate'] = start_date
+        if end_date:
+            params['endDate'] = end_date
+        
+        logger.info(f"Making initial request to EastMoney API for fund {fund_code}")
         response = requests.get(api_url, params=params, headers=headers)
         
-        if response.status_code == 200:
-            try:
-                data = response.json()
-            except json.JSONDecodeError:
-                logger.error(f"Invalid JSON response from EastMoney API: {response.text[:200]}")
-                return []
-            
-            if 'Data' in data and 'LSJZList' in data['Data']:
-                result = []
-                for item in data['Data']['LSJZList']:
-                    # 转换数据格式
-                    value_data = {
-                        'date': item['FSRQ'],  # 净值日期
-                        'net_value': item['DWJZ'],  # 单位净值
-                        'accumulated_value': item['LJJZ'],  # 累计净值
-                        'daily_change': item['JZZZL'],  # 日增长率
-                    }
-                    result.append(value_data)
-                
-                # 计算总页数
-                total_pages = data['TotalPages'] if 'TotalPages' in data else 1
-                
-                # 如果有多页，获取后续页的数据
-                if total_pages > 1 and page_size < data['TotalCount']:
-                    for page in range(2, total_pages + 1):
-                        params['pageIndex'] = page
-                        try:
-                            page_response = requests.get(api_url, params=params, headers=headers)
-                            if page_response.status_code == 200:
-                                page_data = page_response.json()
-                                if 'Data' in page_data and 'LSJZList' in page_data['Data']:
-                                    for item in page_data['Data']['LSJZList']:
-                                        value_data = {
-                                            'date': item['FSRQ'],
-                                            'net_value': item['DWJZ'],
-                                            'accumulated_value': item['LJJZ'],
-                                            'daily_change': item['JZZZL'],
-                                        }
-                                        result.append(value_data)
-                        except Exception as e:
-                            logger.error(f"Error fetching page {page} for fund {fund_code}: {str(e)}")
-                
-                return result
+        if response.status_code != 200:
+            logger.error(f"Failed to fetch data from EastMoney API: {response.status_code}")
+            return []
         
-        logger.warning(f"Failed to fetch data from EastMoney API: {response.status_code}")
-        return []
+        try:
+            data = response.json()
+        except json.JSONDecodeError:
+            logger.error(f"Invalid JSON response from EastMoney API: {response.text[:200]}")
+            return []
+        
+        if 'Data' not in data or 'LSJZList' not in data['Data']:
+            logger.error(f"Unexpected API response structure: {data}")
+            return []
+        
+        # 初始化结果列表
+        result = []
+        
+        # 处理第一页数据
+        for item in data['Data']['LSJZList']:
+            value_data = {
+                'date': item['FSRQ'],  # 净值日期
+                'net_value': item['DWJZ'],  # 单位净值
+                'accumulated_value': item['LJJZ'],  # 累计净值
+                'daily_change': item['JZZZL'],  # 日增长率
+            }
+            result.append(value_data)
+        
+        # 计算总页数和总记录数
+        total_pages = data['TotalPages'] if 'TotalPages' in data else 1
+        total_count = data['TotalCount'] if 'TotalCount' in data else len(result)
+        
+        logger.info(f"Fund {fund_code} has {total_count} records across {total_pages} pages")
+        
+        # 继续获取其他页的数据
+        if total_pages > 1:
+            for page in range(2, total_pages + 1):
+                try:
+                    logger.info(f"Fetching page {page}/{total_pages} for fund {fund_code}")
+                    params['pageIndex'] = page
+                    page_response = requests.get(api_url, params=params, headers=headers)
+                    
+                    if page_response.status_code == 200:
+                        page_data = page_response.json()
+                        if 'Data' in page_data and 'LSJZList' in page_data['Data']:
+                            for item in page_data['Data']['LSJZList']:
+                                value_data = {
+                                    'date': item['FSRQ'],
+                                    'net_value': item['DWJZ'],
+                                    'accumulated_value': item['LJJZ'],
+                                    'daily_change': item['JZZZL'],
+                                }
+                                result.append(value_data)
+                    else:
+                        logger.warning(f"Failed to fetch page {page} for fund {fund_code}: {page_response.status_code}")
+                    
+                except Exception as e:
+                    logger.error(f"Error fetching page {page} for fund {fund_code}: {str(e)}")
+        
+        logger.info(f"Successfully retrieved {len(result)} records for fund {fund_code}")
+        return result
     
     except Exception as e:
         logger.error(f"Exception in fetch_eastmoney_fund_data: {str(e)}")

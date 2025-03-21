@@ -1,6 +1,48 @@
 from flask import Flask
 from app.config import get_config
 from app.extensions import init_extensions, db
+import logging
+import sys
+
+def configure_logging(app):
+    """配置应用日志"""
+    # 获取根日志记录器
+    root_logger = logging.getLogger()
+    
+    # 配置日志级别
+    if app.debug:
+        root_logger.setLevel(logging.DEBUG)
+    else:
+        root_logger.setLevel(logging.INFO)
+    
+    # 清除现有的handlers
+    if root_logger.handlers:
+        for handler in root_logger.handlers:
+            root_logger.removeHandler(handler)
+    
+    # 创建格式化器
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
+    # 添加控制台handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
+    
+    # 添加文件handler (可选)
+    # file_handler = logging.FileHandler('app.log')
+    # file_handler.setFormatter(formatter)
+    # root_logger.addHandler(file_handler)
+    
+    # 设置Flask内部日志器
+    app.logger.handlers = []
+    for handler in root_logger.handlers:
+        app.logger.addHandler(handler)
+    
+    # 设置其他库的日志级别
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)
+    logging.getLogger('sqlalchemy').setLevel(logging.WARNING)
+    
+    app.logger.info("日志系统已初始化")
 
 def create_app():
     """创建并配置Flask应用"""
@@ -8,6 +50,9 @@ def create_app():
     
     # 加载配置
     app.config.from_object(get_config())
+    
+    # 配置日志
+    configure_logging(app)
     
     # 初始化扩展
     init_extensions(app)
