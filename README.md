@@ -18,9 +18,12 @@ fund-notes-server/
 │   │   ├── auth.py         # 认证API
 │   │   ├── funds.py        # 基金API
 │   │   ├── notes.py        # 笔记API
-│   │   └── purchases.py    # 购买记录API
+│   │   ├── purchases.py    # 购买记录API
+│   │   └── fund_values.py  # 基金净值API
 │   ├── web/                # Web前端路由
 │   ├── services/           # 业务逻辑
+│   ├── tasks/              # 定时任务
+│   │   └── scheduled_tasks.py # 定时任务设置
 │   ├── static/             # 静态资源(CSS, JS, 图片)
 │   ├── templates/          # HTML模板
 │   └── utils/              # 工具函数
@@ -88,6 +91,9 @@ python run.py
 - `PUT /api/purchases/<id>`: 更新购买记录
 - `DELETE /api/purchases/<id>`: 删除购买记录
 
+### 基金净值
+- `GET /api/fund_values`: 获取基金净值数据
+
 ## Web前端
 
 系统提供完整的Web前端界面，支持以下功能：
@@ -134,3 +140,35 @@ gunicorn -w 4 -b 0.0.0.0:5000 run:app
 - 前端：HTML, CSS, JavaScript, Bootstrap 5
 - 数据库：MySQL
 - 缓存：Redis 
+
+## 功能特点
+
+### 基金净值自动更新
+
+系统具备自动更新基金净值数据的功能：
+
+1. **定时更新**: 每天下午18:00自动从天天基金网获取最新的基金净值数据
+2. **手动更新**: 可通过Web界面或命令行手动触发更新
+3. **净值展示**: 以图表和表格形式展示基金历史净值和业绩表现
+4. **收益分析**: 自动计算不同时间段（一周、一月、三月、六月、一年等）的收益率
+
+#### 手动更新净值数据
+
+可以使用提供的命令行脚本手动更新基金净值数据：
+
+```bash
+# 更新所有基金的净值数据
+python update_fund_values.py
+
+# 更新指定基金的净值数据
+python update_fund_values.py -c 000001
+
+# 更新最近30天的净值数据
+python update_fund_values.py -d 30
+
+# 更新指定日期范围的净值数据
+python update_fund_values.py -s 2023-01-01 -e 2023-12-31
+
+# 显示详细日志
+python update_fund_values.py -v
+``` 

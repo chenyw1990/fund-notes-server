@@ -1,0 +1,440 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ fund.name }} ({{ fund.code }}) 净值历史 - 基金笔记系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">{{ fund.name }} <small class="text-muted">({{ fund.code }})</small> 净值历史</h1>
+    <div>
+        <a href="{{ url_for('web.fund_detail', code=fund.code) }}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> 返回基金详情
+        </a>
+        {% if current_user.is_authenticated %}
+        <form action="{{ url_for('web.refresh_fund_values', code=fund.code) }}" method="post" class="d-inline">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-arrow-clockwise"></i> 刷新净值数据
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+{% if values %}
+    <!-- 显示最新净值信息卡片 -->
+    {% set latest = values[0] %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">最新净值 ({{ latest.date.strftime('%Y-%m-%d') }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-title text-muted">单位净值</h6>
+                            <h3 class="mb-0">{{ "%.4f"|format(latest.net_value) }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-title text-muted">累计净值</h6>
+                            <h3 class="mb-0">{{ "%.4f"|format(latest.accumulated_value) }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-title text-muted">日涨跌幅</h6>
+                            <h3 class="mb-0 {% if latest.daily_change != None and latest.daily_change > 0 %}text-danger{% elif latest.daily_change != None and latest.daily_change < 0 %}text-success{% endif %}">
+                                {{ "%.2f"|format(latest.daily_change) if latest.daily_change != None else '-' }}%
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-title text-muted">近一年涨幅</h6>
+                            <h3 class="mb-0 {% if latest.last_year_change != None and latest.last_year_change > 0 %}text-danger{% elif latest.last_year_change != None and latest.last_year_change < 0 %}text-success{% endif %}">
+                                {{ "%.2f"|format(latest.last_year_change) if latest.last_year_change != None else '-' }}%
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 各时段收益率 -->
+    {% if performance %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">业绩表现</h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap">
+                <div class="period-performance me-4 mb-3">
+                    <span class="period-label">近一周：</span>
+                    <span class="period-value {% if performance.week != None and performance.week > 0 %}text-danger{% elif performance.week != None and performance.week < 0 %}text-success{% endif %}">
+                        {{ "%.2f"|format(performance.week) if performance.week != None else '-' }}%
+                    </span>
+                </div>
+                <div class="period-performance me-4 mb-3">
+                    <span class="period-label">近一月：</span>
+                    <span class="period-value {% if performance.month != None and performance.month > 0 %}text-danger{% elif performance.month != None and performance.month < 0 %}text-success{% endif %}">
+                        {{ "%.2f"|format(performance.month) if performance.month != None else '-' }}%
+                    </span>
+                </div>
+                <div class="period-performance me-4 mb-3">
+                    <span class="period-label">近三月：</span>
+                    <span class="period-value {% if performance.three_month != None and performance.three_month > 0 %}text-danger{% elif performance.three_month != None and performance.three_month < 0 %}text-success{% endif %}">
+                        {{ "%.2f"|format(performance.three_month) if performance.three_month != None else '-' }}%
+                    </span>
+                </div>
+                <div class="period-performance me-4 mb-3">
+                    <span class="period-label">近六月：</span>
+                    <span class="period-value {% if performance.six_month != None and performance.six_month > 0 %}text-danger{% elif performance.six_month != None and performance.six_month < 0 %}text-success{% endif %}">
+                        {{ "%.2f"|format(performance.six_month) if performance.six_month != None else '-' }}%
+                    </span>
+                </div>
+                <div class="period-performance me-4 mb-3">
+                    <span class="period-label">近一年：</span>
+                    <span class="period-value {% if performance.year != None and performance.year > 0 %}text-danger{% elif performance.year != None and performance.year < 0 %}text-success{% endif %}">
+                        {{ "%.2f"|format(performance.year) if performance.year != None else '-' }}%
+                    </span>
+                </div>
+                <div class="period-performance me-4 mb-3">
+                    <span class="period-label">近三年：</span>
+                    <span class="period-value {% if performance.three_year != None and performance.three_year > 0 %}text-danger{% elif performance.three_year != None and performance.three_year < 0 %}text-success{% endif %}">
+                        {{ "%.2f"|format(performance.three_year) if performance.three_year != None else '-' }}%
+                    </span>
+                </div>
+                <div class="period-performance me-4 mb-3">
+                    <span class="period-label">近五年：</span>
+                    <span class="period-value {% if performance.five_year != None and performance.five_year > 0 %}text-danger{% elif performance.five_year != None and performance.five_year < 0 %}text-success{% endif %}">
+                        {{ "%.2f"|format(performance.five_year) if performance.five_year != None else '-' }}%
+                    </span>
+                </div>
+                <div class="period-performance me-4 mb-3">
+                    <span class="period-label">成立以来：</span>
+                    <span class="period-value {% if performance.since_inception != None and performance.since_inception > 0 %}text-danger{% elif performance.since_inception != None and performance.since_inception < 0 %}text-success{% endif %}">
+                        {{ "%.2f"|format(performance.since_inception) if performance.since_inception != None else '-' }}%
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 净值走势图 -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">净值走势</h5>
+            <div class="btn-group btn-group-sm" role="group" aria-label="时间范围选择">
+                <button type="button" class="btn btn-outline-secondary period-btn active" data-period="1m">1月</button>
+                <button type="button" class="btn btn-outline-secondary period-btn" data-period="3m">3月</button>
+                <button type="button" class="btn btn-outline-secondary period-btn" data-period="6m">6月</button>
+                <button type="button" class="btn btn-outline-secondary period-btn" data-period="1y">1年</button>
+                <button type="button" class="btn btn-outline-secondary period-btn" data-period="3y">3年</button>
+                <button type="button" class="btn btn-outline-secondary period-btn" data-period="all">全部</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <canvas id="fundValueChart" height="300"></canvas>
+        </div>
+    </div>
+
+    <!-- 净值表格 -->
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>单位净值</th>
+                    <th>累计净值</th>
+                    <th>日涨跌幅</th>
+                    <th>近一周</th>
+                    <th>近一月</th>
+                    <th>近一年</th>
+                    <th>成立以来</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for value in values %}
+                    <tr>
+                        <td>{{ value.date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ "%.4f"|format(value.net_value) }}</td>
+                        <td>{{ "%.4f"|format(value.accumulated_value) }}</td>
+                        <td class="{% if value.daily_change != None and value.daily_change > 0 %}text-danger{% elif value.daily_change != None and value.daily_change < 0 %}text-success{% endif %}">
+                            {{ "%.2f"|format(value.daily_change) if value.daily_change != None else '-' }}%
+                        </td>
+                        <td class="{% if value.last_week_change != None and value.last_week_change > 0 %}text-danger{% elif value.last_week_change != None and value.last_week_change < 0 %}text-success{% endif %}">
+                            {{ "%.2f"|format(value.last_week_change) if value.last_week_change != None else '-' }}%
+                        </td>
+                        <td class="{% if value.last_month_change != None and value.last_month_change > 0 %}text-danger{% elif value.last_month_change != None and value.last_month_change < 0 %}text-success{% endif %}">
+                            {{ "%.2f"|format(value.last_month_change) if value.last_month_change != None else '-' }}%
+                        </td>
+                        <td class="{% if value.last_year_change != None and value.last_year_change > 0 %}text-danger{% elif value.last_year_change != None and value.last_year_change < 0 %}text-success{% endif %}">
+                            {{ "%.2f"|format(value.last_year_change) if value.last_year_change != None else '-' }}%
+                        </td>
+                        <td class="{% if value.since_inception_change != None and value.since_inception_change > 0 %}text-danger{% elif value.since_inception_change != None and value.since_inception_change < 0 %}text-success{% endif %}">
+                            {{ "%.2f"|format(value.since_inception_change) if value.since_inception_change != None else '-' }}%
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- 分页 -->
+    {% if pagination.pages > 1 %}
+    <nav aria-label="页码导航">
+        <ul class="pagination justify-content-center">
+            {% if pagination.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('web.fund_values', code=fund.code, page=pagination.prev_num) }}">上一页</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">上一页</span>
+                </li>
+            {% endif %}
+
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    {% if page_num == pagination.page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                    {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('web.fund_values', code=fund.code, page=page_num) }}">{{ page_num }}</a>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('web.fund_values', code=fund.code, page=pagination.next_num) }}">下一页</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">下一页</span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+{% else %}
+    <div class="alert alert-info">
+        该基金暂无净值数据。
+        {% if current_user.is_authenticated %}
+        <form action="{{ url_for('web.refresh_fund_values', code=fund.code) }}" method="post" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-primary">
+                立即获取净值数据
+            </button>
+        </form>
+        {% endif %}
+    </div>
+{% endif %}
+
+{% endblock %}
+
+{% block styles %}
+<style>
+    .period-performance {
+        font-size: 1.1rem;
+    }
+    
+    .period-label {
+        font-weight: 500;
+    }
+    
+    .text-danger {
+        color: #e15241 !important;
+    }
+    
+    .text-success {
+        color: #2eb85c !important;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<!-- 引入Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 准备数据
+        var allValues = [];
+        {% for value in all_values %}
+            allValues.push({
+                date: "{{ value.date.strftime('%Y-%m-%d') }}",
+                netValue: {{ value.net_value }},
+                accValue: {{ value.accumulated_value }},
+                dailyChange: {% if value.daily_change != None %}{{ value.daily_change }}{% else %}null{% endif %}
+            });
+        {% endfor %}
+        
+        // 按日期升序排序
+        allValues.sort(function(a, b) {
+            return new Date(a.date) - new Date(b.date);
+        });
+        
+        // 初始化图表
+        var ctx = document.getElementById('fundValueChart').getContext('2d');
+        var chart = null;
+        
+        // 创建图表函数
+        function createChart(data) {
+            if (chart) {
+                chart.destroy();
+            }
+            
+            var dates = data.map(function(item) { return item.date; });
+            var netValues = data.map(function(item) { return item.netValue; });
+            var accValues = data.map(function(item) { return item.accValue; });
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: '单位净值',
+                            data: netValues,
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            pointHoverRadius: 3
+                        },
+                        {
+                            label: '累计净值',
+                            data: accValues,
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            pointHoverRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: 10
+                            }
+                        },
+                        y: {
+                            beginAtZero: false
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    var label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y.toFixed(4);
+                                    }
+                                    return label;
+                                },
+                                afterLabel: function(context) {
+                                    var dataIndex = context.dataIndex;
+                                    var datasetIndex = context.datasetIndex;
+                                    if (datasetIndex === 0) { // 单位净值
+                                        var dailyChange = data[dataIndex].dailyChange;
+                                        if (dailyChange !== null) {
+                                            return '日涨跌幅: ' + dailyChange.toFixed(2) + '%';
+                                        }
+                                    }
+                                    return null;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 根据时间范围筛选数据
+        function filterDataByPeriod(period) {
+            if (period === 'all') {
+                return allValues;
+            }
+            
+            var now = new Date();
+            var startDate;
+            
+            switch(period) {
+                case '1m':
+                    startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+                    break;
+                case '3m':
+                    startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+                    break;
+                case '6m':
+                    startDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+                    break;
+                case '1y':
+                    startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+                    break;
+                case '3y':
+                    startDate = new Date(now.getFullYear() - 3, now.getMonth(), now.getDate());
+                    break;
+                default:
+                    startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+            }
+            
+            return allValues.filter(function(item) {
+                return new Date(item.date) >= startDate;
+            });
+        }
+        
+        // 如果有净值数据，初始化图表（默认显示近1个月）
+        if (allValues.length > 0) {
+            createChart(filterDataByPeriod('1m'));
+            
+            // 监听时间范围按钮点击事件
+            document.querySelectorAll('.period-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    // 移除所有按钮的active类
+                    document.querySelectorAll('.period-btn').forEach(function(b) {
+                        b.classList.remove('active');
+                    });
+                    // 为当前按钮添加active类
+                    this.classList.add('active');
+                    
+                    // 获取选中的时间范围
+                    var period = this.getAttribute('data-period');
+                    
+                    // 更新图表
+                    createChart(filterDataByPeriod(period));
+                });
+            });
+        }
+    });
+</script>
+{% endblock %} 

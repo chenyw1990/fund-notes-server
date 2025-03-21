@@ -7,7 +7,8 @@ from datetime import datetime
 
 from app.web import web_bp
 from app.extensions import db
-from app.models import User, Fund, Note, Purchase
+from app.models import User, Fund, Note, Purchase, FundValue
+from app.services.fund_value_service import get_fund_values_by_date_range, fetch_fund_value, calculate_fund_performance
 
 # 辅助函数
 def get_fund(fund_id):
@@ -549,4 +550,76 @@ def delete_purchase(purchase_id):
     db.session.commit()
     
     flash('购买记录已删除', 'success')
-    return redirect(url_for('web.my_purchases')) 
+    return redirect(url_for('web.my_purchases'))
+
+# Fund value pages
+@web_bp.route('/fund/<code>/values')
+def fund_values(code):
+    """显示基金净值历史"""
+    # 获取基金信息
+    fund = Fund.query.filter_by(code=code).first_or_404()
+    
+    # 分页参数
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    
+    # 查询该基金的净值记录
+    pagination = FundValue.query.filter_by(fund_id=fund.id)\
+        .order_by(FundValue.date.desc())\
+        .paginate(page=page, per_page=per_page)
+    
+    values = pagination.items
+    
+    # 如果没有净值数据，尝试获取
+    if not values and current_user.is_authenticated:
+        try:
+            fetch_fund_value(fund_code=code)
+            # 重新查询
+            pagination = FundValue.query.filter_by(fund_id=fund.id)\
+                .order_by(FundValue.date.desc())\
+                .paginate(page=page, per_page=per_page)
+            values = pagination.items
+        except Exception as e:
+            flash(f'获取基金净值数据失败: {str(e)}', 'danger')
+    
+    # 获取所有净值数据用于绘制图表
+    all_values = FundValue.query.filter_by(fund_id=fund.id)\
+        .order_by(FundValue.date.asc())\
+        .all()
+    
+    # 计算各时间段收益率
+    performance = calculate_fund_performance(fund.id) if values else {
+        'week': None,
+        'month': None,
+        'three_month': None,
+        'six_month': None,
+        'year': None,
+        'three_year': None,
+        'five_year': None,
+        'since_inception': None
+    }
+    
+    return render_template('fund_values.html', 
+                          fund=fund, 
+                          values=values, 
+                          pagination=pagination,
+                          all_values=all_values,
+                          performance=performance)
+
+@web_bp.route('/fund/<code>/refresh-values', methods=['POST'])
+@login_required
+def refresh_fund_values(code):
+    """刷新基金净值数据"""
+    # 获取基金信息
+    fund = Fund.query.filter_by(code=code).first_or_404()
+    
+    try:
+        count = fetch_fund_value(fund_code=code)
+        if count > 0:
+            flash(f'成功更新 {count} 条净值数据', 'success')
+        else:
+            flash('没有新的净值数据可更新', 'info')
+    except Exception as e:
+        flash(f'更新净值数据失败: {str(e)}', 'danger')
+    
+    return redirect(url_for('web.fund_values', code=code)) 
