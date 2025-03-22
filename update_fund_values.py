@@ -19,32 +19,24 @@ from app import create_app
 from app.services.fund_value_service import fetch_fund_value
 
 def setup_logging(verbose=False):
-    """设置日志"""
+    """设置日志级别
+    
+    如果Flask应用已经配置了日志，则只调整日志级别
+    """
     log_level = logging.DEBUG if verbose else logging.INFO
     
-    # 清除现有的handlers，避免重复日志
+    # 获取根日志记录器并设置级别
     root_logger = logging.getLogger()
-    if root_logger.handlers:
-        for handler in root_logger.handlers:
-            root_logger.removeHandler(handler)
-    
-    # 创建格式化器
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
-    # 添加控制台handler
-    console_handler = logging.StreamHandler(sys.stdout)  # 使用stdout而不是stderr
-    console_handler.setLevel(log_level)
-    console_handler.setFormatter(formatter)
-    
-    # 配置root logger
     root_logger.setLevel(log_level)
-    root_logger.addHandler(console_handler)
     
-    # 也可以添加文件handler，日志同时输出到文件
-    # file_handler = logging.FileHandler('fund_update.log')
-    # file_handler.setLevel(log_level)
-    # file_handler.setFormatter(formatter)
-    # root_logger.addHandler(file_handler)
+    # 如果没有处理器，添加一个简单的控制台处理器
+    # 这种情况应该只在未通过Flask应用运行时发生
+    if not root_logger.handlers:
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(formatter)
+        root_logger.addHandler(console_handler)
+        logging.info("临时日志系统已初始化，将在Flask应用启动后被替换")
 
 def parse_args():
     """解析命令行参数"""
@@ -60,10 +52,17 @@ def parse_args():
 def main():
     """主函数"""
     args = parse_args()
+    
+    # 设置初始日志级别
     setup_logging(args.verbose)
     
-    # 创建应用上下文
+    # 创建应用上下文 - 这将配置Flask的日志
+    logging.info("正在创建Flask应用...")
     app = create_app()
+    
+    # 再次调整日志级别以匹配命令行参数
+    setup_logging(args.verbose)
+    
     with app.app_context():
         try:
             logging.info("开始更新基金净值数据...")

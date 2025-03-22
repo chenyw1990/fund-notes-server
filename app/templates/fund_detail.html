@@ -44,7 +44,7 @@
                     </div>
                     <div class="fund-info-item">
                         <span class="fund-info-label">规模:</span>
-                        <span>{{ fund.size }}亿元</span>
+                        <span>{% if fund.size %}{{ fund.size }}亿元{% else %}未知{% endif %}</span>
                     </div>
                 </div>
             </div>

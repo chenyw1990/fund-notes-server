@@ -1,0 +1,99 @@
+{'Data': {'LSJZList': [
+            {'FSRQ': '2025-03-21', 'DWJZ': '1.5481', 'LJJZ': '1.5481', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-1.45', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-20', 'DWJZ': '1.5708', 'LJJZ': '1.5708', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.84', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-19', 'DWJZ': '1.5841', 'LJJZ': '1.5841', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '0.06', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-18', 'DWJZ': '1.5832', 'LJJZ': '1.5832', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '0.27', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-17', 'DWJZ': '1.5790', 'LJJZ': '1.5790', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.24', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-14', 'DWJZ': '1.5828', 'LJJZ': '1.5828', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '2.31', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-13', 'DWJZ': '1.5470', 'LJJZ': '1.5470', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.39', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-12', 'DWJZ': '1.5530', 'LJJZ': '1.5530', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.33', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-11', 'DWJZ': '1.5582', 'LJJZ': '1.5582', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '0.30', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-10', 'DWJZ': '1.5536', 'LJJZ': '1.5536', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.37', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-07', 'DWJZ': '1.5594', 'LJJZ': '1.5594', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.29', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-06', 'DWJZ': '1.5640', 'LJJZ': '1.5640', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '1.31', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-05', 'DWJZ': '1.5438', 'LJJZ': '1.5438', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '0.42', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-04', 'DWJZ': '1.5373', 'LJJZ': '1.5373', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.08', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-03', 'DWJZ': '1.5385', 'LJJZ': '1.5385', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.02', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-02-28', 'DWJZ': '1.5388', 'LJJZ': '1.5388', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-1.86', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-02-27', 'DWJZ': '1.5679', 'LJJZ': '1.5679', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '0.19', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-02-26', 'DWJZ': '1.5649', 'LJJZ': '1.5649', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '0.82', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-02-25', 'DWJZ': '1.5521', 'LJJZ': '1.5521', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-1.05', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-02-24', 'DWJZ': '1.5686', 'LJJZ': '1.5686', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.21', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            }
+        ], 'FundType': '001', 'SYType': None, 'isNewType': False, 'Feature': '030,
+        031,
+        050,
+        051,
+        053,
+        080'
+    }, 'ErrCode': 0, 'ErrMsg': None, 'TotalCount': 1328, 'Expansion': None, 'PageSize': 20, 'PageIndex': 1
+}
+2025-03-22 09: 32: 01,
+494 - app.services.fund_value_service - INFO - data: {'Data': {'LSJZList': [
+            {'FSRQ': '2025-03-21', 'DWJZ': '1.5481', 'LJJZ': '1.5481', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-1.45', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-20', 'DWJZ': '1.5708', 'LJJZ': '1.5708', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.84', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-19', 'DWJZ': '1.5841', 'LJJZ': '1.5841', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '0.06', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-18', 'DWJZ': '1.5832', 'LJJZ': '1.5832', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '0.27', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-17', 'DWJZ': '1.5790', 'LJJZ': '1.5790', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.24', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-14', 'DWJZ': '1.5828', 'LJJZ': '1.5828', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '2.31', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-13', 'DWJZ': '1.5470', 'LJJZ': '1.5470', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.39', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-12', 'DWJZ': '1.5530', 'LJJZ': '1.5530', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.33', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-11', 'DWJZ': '1.5582', 'LJJZ': '1.5582', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '0.30', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-10', 'DWJZ': '1.5536', 'LJJZ': '1.5536', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.37', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-07', 'DWJZ': '1.5594', 'LJJZ': '1.5594', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.29', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-06', 'DWJZ': '1.5640', 'LJJZ': '1.5640', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '1.31', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-05', 'DWJZ': '1.5438', 'LJJZ': '1.5438', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '0.42', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-04', 'DWJZ': '1.5373', 'LJJZ': '1.5373', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.08', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-03-03', 'DWJZ': '1.5385', 'LJJZ': '1.5385', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.02', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-02-28', 'DWJZ': '1.5388', 'LJJZ': '1.5388', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-1.86', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-02-27', 'DWJZ': '1.5679', 'LJJZ': '1.5679', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '0.19', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-02-26', 'DWJZ': '1.5649', 'LJJZ': '1.5649', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '0.82', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-02-25', 'DWJZ': '1.5521', 'LJJZ': '1.5521', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-1.05', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            },
+            {'FSRQ': '2025-02-24', 'DWJZ': '1.5686', 'LJJZ': '1.5686', 'SDATE': None, 'ACTUALSYI': '', 'NAVTYPE': '1', 'JZZZL': '-0.21', 'SGZT': '开放申购', 'SHZT': '开放赎回', 'FHFCZ': '', 'FHFCBZ': '', 'DTYPE': None, 'FHSP': ''
+            }
+        ], 'FundType': '001', 'SYType': None, 'isNewType': False, 'Feature': '030,
+        031,
+        050,
+        051,
+        053,
+        080'
+    }, 'ErrCode': 0, 'ErrMsg': None, 'TotalCount': 1328, 'Expansion': None, 'PageSize': 20, 'PageIndex': 1
+}

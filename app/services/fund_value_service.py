@@ -41,11 +41,21 @@ def fetch_fund_value(fund_code=None, start_date=None, end_date=None):
                 end_date = datetime.now().date().strftime('%Y-%m-%d')
             
             if not start_date:
-                # 尝试获取基金的成立日期，如果没有则默认获取最近一年的数据
-                if hasattr(fund, 'inception_date') and fund.inception_date:
+                # 首先检查数据库中是否已有该基金的净值信息
+                latest_value = FundValue.query.filter_by(fund_id=fund.id).order_by(FundValue.date.desc()).first()
+                logger.info(f"Latest value: {latest_value}")
+                if latest_value:
+                    # 如果数据库中有净值信息，从最近一次净值的日期开始获取
+                    # 加1天是为了避免重复获取最后一天的数据
+                    start_date = (latest_value.date + timedelta(days=1)).strftime('%Y-%m-%d')
+                    logger.info(f"Using latest value date from database: {start_date}")
+                elif hasattr(fund, 'inception_date') and fund.inception_date:
+                    # 如果数据库中没有净值但有成立日期，则从成立日期开始获取
                     start_date = fund.inception_date.strftime('%Y-%m-%d')
+                    logger.info(f"Using inception date from database: {start_date}")
                 else:
-                    # 如果没有成立日期信息，默认获取近2000天（约5.5年）的数据
+                    logger.info(f"No latest value or inception date found for fund {fund.code}")
+                    # 如果既没有净值记录也没有成立日期信息，默认获取近2000天的数据
                     # 天天基金API通常最多返回约2000条记录
                     end = datetime.strptime(end_date, '%Y-%m-%d').date()
                     start = end - timedelta(days=2000)
@@ -65,38 +75,22 @@ def fetch_fund_value(fund_code=None, start_date=None, end_date=None):
                         accumulated_value = float(value_data['accumulated_value'])
                         daily_change = float(value_data['daily_change']) if value_data['daily_change'] not in [None, '--', ''] else None
                         
-                        # 从天天基金网可能无法直接获取以下数据，需要另外计算或从其他渠道获取
-                        last_week_change = None
-                        last_month_change = None
-                        last_year_change = None
-                        since_inception_change = None
-                        
-                        # 如果API返回了这些数据，则使用它们
-                        if 'last_week_change' in value_data:
-                            last_week_change = float(value_data['last_week_change']) if value_data['last_week_change'] not in [None, '--', ''] else None
-                        if 'last_month_change' in value_data:
-                            last_month_change = float(value_data['last_month_change']) if value_data['last_month_change'] not in [None, '--', ''] else None
-                        if 'last_year_change' in value_data:
-                            last_year_change = float(value_data['last_year_change']) if value_data['last_year_change'] not in [None, '--', ''] else None
-                        if 'since_inception_change' in value_data:
-                            since_inception_change = float(value_data['since_inception_change']) if value_data['since_inception_change'] not in [None, '--', ''] else None
-                        
                         # 保存到数据库
                         save_fund_value(
                             fund.id, 
                             value_date,
                             net_value,
                             accumulated_value,
-                            daily_change,
-                            last_week_change,
-                            last_month_change,
-                            last_year_change,
-                            since_inception_change
+                            daily_change
                         )
                         updated_count += 1
                     except (ValueError, TypeError) as e:
                         logger.error(f"Error processing value data for {fund.code}: {str(e)}, data: {value_data}")
                         continue
+                
+                # 在所有值都保存后，计算并更新各时间段的收益率
+                if updated_count > 0:
+                    update_performance_metrics(fund.id)
             else:
                 logger.warning(f"No data returned for fund {fund.code}")
                 
@@ -175,9 +169,15 @@ def fetch_eastmoney_fund_data(fund_code, start_date=None, end_date=None):
             result.append(value_data)
         
         # 计算总页数和总记录数
-        total_pages = data['TotalPages'] if 'TotalPages' in data else 1
-        total_count = data['TotalCount'] if 'TotalCount' in data else len(result)
-        
+        total_count = data.get('TotalCount', len(result))
+        # 如果数据中没有TotalPages，则根据TotalCount和PageSize计算总页数
+        if 'TotalPages' in data:
+            total_pages = data['TotalPages']
+        else:
+            # 确保计算总页数时不会除以零
+            total_pages = (total_count + page_size - 1) // page_size if page_size > 0 else 1
+
+        logger.info(f"Response data structure: {data.keys()}")
         logger.info(f"Fund {fund_code} has {total_count} records across {total_pages} pages")
         
         # 继续获取其他页的数据
@@ -212,9 +212,7 @@ def fetch_eastmoney_fund_data(fund_code, start_date=None, end_date=None):
         logger.error(f"Exception in fetch_eastmoney_fund_data: {str(e)}")
         return []
 
-def save_fund_value(fund_id, value_date, net_value, accumulated_value, daily_change=None, 
-                   last_week_change=None, last_month_change=None, last_year_change=None,
-                   since_inception_change=None):
+def save_fund_value(fund_id, value_date, net_value, accumulated_value, daily_change=None):
     """保存基金净值数据
     
     Args:
@@ -223,10 +221,6 @@ def save_fund_value(fund_id, value_date, net_value, accumulated_value, daily_cha
         net_value: 单位净值
         accumulated_value: 累计净值
         daily_change: 日涨跌幅
-        last_week_change: 周涨跌幅
-        last_month_change: 月涨跌幅
-        last_year_change: 年涨跌幅
-        since_inception_change: 成立以来涨跌幅
     
     Returns:
         保存的FundValue对象
@@ -243,10 +237,6 @@ def save_fund_value(fund_id, value_date, net_value, accumulated_value, daily_cha
             existing_value.net_value = net_value
             existing_value.accumulated_value = accumulated_value
             existing_value.daily_change = daily_change
-            existing_value.last_week_change = last_week_change
-            existing_value.last_month_change = last_month_change
-            existing_value.last_year_change = last_year_change
-            existing_value.since_inception_change = since_inception_change
             existing_value.updated_at = datetime.utcnow()
             db.session.commit()
             return existing_value
@@ -257,11 +247,7 @@ def save_fund_value(fund_id, value_date, net_value, accumulated_value, daily_cha
                 date=value_date,
                 net_value=net_value,
                 accumulated_value=accumulated_value,
-                daily_change=daily_change,
-                last_week_change=last_week_change,
-                last_month_change=last_month_change,
-                last_year_change=last_year_change,
-                since_inception_change=since_inception_change
+                daily_change=daily_change
             )
             db.session.add(fund_value)
             db.session.commit()
@@ -410,4 +396,58 @@ def calculate_return(current_value, base_value):
     if current_value.accumulated_value is None or base_value.accumulated_value is None or base_value.accumulated_value == 0:
         return None
     
-    return round((current_value.accumulated_value / base_value.accumulated_value - 1) * 100, 2) 
+    return round((current_value.accumulated_value / base_value.accumulated_value - 1) * 100, 2)
+
+def update_performance_metrics(fund_id):
+    """计算并更新基金的业绩指标
+    
+    Args:
+        fund_id: 基金ID
+    
+    Returns:
+        是否成功更新
+    """
+    try:
+        # 获取最新的净值数据
+        latest_value = get_latest_fund_values(fund_id=fund_id, limit=1)
+        if not latest_value:
+            logger.warning(f"No fund value found for fund_id={fund_id}")
+            return False
+            
+        latest_value = latest_value[0]
+        latest_date = latest_value.date
+        
+        # 计算各个时间范围的日期
+        week_ago = latest_date - timedelta(days=7)
+        month_ago = latest_date.replace(month=latest_date.month-1) if latest_date.month > 1 else latest_date.replace(year=latest_date.year-1, month=12)
+        year_ago = latest_date.replace(year=latest_date.year-1)
+        
+        # 查找对应日期的净值数据
+        week_value = find_closest_value(fund_id, week_ago)
+        month_value = find_closest_value(fund_id, month_ago)
+        year_value = find_closest_value(fund_id, year_ago)
+        
+        # 查找最早的净值数据作为成立以来基准
+        inception_value = FundValue.query.filter_by(fund_id=fund_id).order_by(FundValue.date.asc()).first()
+        
+        # 计算各时间段收益率
+        week_change = calculate_return(latest_value, week_value)
+        month_change = calculate_return(latest_value, month_value)
+        year_change = calculate_return(latest_value, year_value)
+        since_inception_change = calculate_return(latest_value, inception_value)
+        
+        # 更新最新净值记录的收益率字段
+        latest_value.last_week_change = week_change
+        latest_value.last_month_change = month_change
+        latest_value.last_year_change = year_change
+        latest_value.since_inception_change = since_inception_change
+        
+        # 提交更新
+        db.session.commit()
+        logger.info(f"Updated performance metrics for fund_id={fund_id}, latest_date={latest_date}")
+        return True
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error updating performance metrics: {str(e)}")
+        return False 

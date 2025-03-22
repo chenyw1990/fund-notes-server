@@ -9,6 +9,7 @@ from app.web import web_bp
 from app.extensions import db
 from app.models import User, Fund, Note, Purchase, FundValue
 from app.services.fund_value_service import get_fund_values_by_date_range, fetch_fund_value, calculate_fund_performance
+from app.services.fund_service import fetch_fund_details
 
 # 辅助函数
 def get_fund(fund_id):
@@ -74,6 +75,12 @@ def fund_detail(code):
     """基金详情页"""
     # 查询基金
     fund = Fund.query.filter_by(code=code).first_or_404()
+    
+    # 如果基金信息不完整，尝试从API获取详细信息
+    if not fund.company or not fund.manager or not fund.inception_date or fund.size is None:
+        updated_fund = fetch_fund_details(code)
+        if updated_fund:
+            fund = updated_fund
     
     # 获取基金相关笔记
     page = request.args.get('page', 1, type=int)

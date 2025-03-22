@@ -4,6 +4,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from app.services.fund_value_service import fetch_fund_value
 
+# 使用名称获取logger，但不进行额外配置
 logger = logging.getLogger(__name__)
 
 # 创建定时任务调度器

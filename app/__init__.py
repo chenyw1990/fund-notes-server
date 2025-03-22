@@ -33,14 +33,22 @@ def configure_logging(app):
     # file_handler.setFormatter(formatter)
     # root_logger.addHandler(file_handler)
     
-    # 设置Flask内部日志器
+    # 设置Flask内部日志器 - 不添加重复的处理器
+    # 清除Flask日志器上现有的处理器
     app.logger.handlers = []
-    for handler in root_logger.handlers:
-        app.logger.addHandler(handler)
+    
+    # 通过propagate=True确保Flask日志传递到根日志器
+    # 而不是直接添加相同的处理器
+    app.logger.propagate = True
     
     # 设置其他库的日志级别
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
     logging.getLogger('sqlalchemy').setLevel(logging.WARNING)
+    
+    # 确保其他日志器也正确传播
+    for name in ['werkzeug', 'sqlalchemy', 'apscheduler']:
+        logger = logging.getLogger(name)
+        logger.propagate = True
     
     app.logger.info("日志系统已初始化")
 
