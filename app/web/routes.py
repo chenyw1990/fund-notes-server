@@ -418,50 +418,46 @@ def my_purchases():
 @web_bp.route('/purchases/create', methods=['GET', 'POST'])
 @login_required
 def create_purchase():
-    """创建购买记录页面"""
+    """Create a new purchase record."""
     if request.method == 'POST':
-        fund_id = request.form.get('fund_id', type=int)
-        fund_code = request.form.get('fund_code', '')
-        amount = request.form.get('amount', type=float)
-        share = request.form.get('share', type=float)
-        price = request.form.get('price', type=float)
-        purchase_date_str = request.form.get('purchase_date')
-        fee = request.form.get('fee', type=float, default=0.0)
+        fund_code = request.form.get('fund_code')
+        purchase_date = request.form.get('purchase_date')
+        amount = request.form.get('amount')
+        share = request.form.get('share')
+        price = request.form.get('price')
+        fee = request.form.get('fee', 0)
         notes = request.form.get('notes', '')
+        before_cutoff = 'before_cutoff' in request.form
         
-        if not fund_id or not amount or not purchase_date_str:
+        # Validate required fields
+        if not all([fund_code, purchase_date, amount]):
             flash('请填写所有必填字段', 'danger')
-            funds = Fund.query.order_by(Fund.code).all()
-            today_date = datetime.now().strftime('%Y-%m-%d')
-            return render_template('create_purchase.html', funds=funds, today_date=today_date)
+            return redirect(url_for('web.create_purchase'))
         
         # 检查基金是否存在
-        fund = Fund.query.get(fund_id)
+        fund = Fund.query.filter_by(code=fund_code).first()
         if not fund:
             flash('所选基金不存在', 'danger')
-            funds = Fund.query.order_by(Fund.code).all()
-            today_date = datetime.now().strftime('%Y-%m-%d')
-            return render_template('create_purchase.html', funds=funds, today_date=today_date)
+            return redirect(url_for('web.create_purchase'))
         
         # 处理日期
         try:
-            purchase_date = datetime.strptime(purchase_date_str, '%Y-%m-%d').date()
+            purchase_date_obj = datetime.strptime(purchase_date, '%Y-%m-%d').date()
         except ValueError:
             flash('日期格式无效，应为YYYY-MM-DD', 'danger')
-            funds = Fund.query.order_by(Fund.code).all()
-            today_date = datetime.now().strftime('%Y-%m-%d')
-            return render_template('create_purchase.html', funds=funds, today_date=today_date)
+            return redirect(url_for('web.create_purchase'))
         
-        # 创建购买记录
+        # Create purchase record
         purchase = Purchase(
             user_id=current_user.id,
-            fund_id=fund_id,
-            amount=amount,
-            share=share,
-            price=price,
-            purchase_date=purchase_date,
-            fee=fee,
-            notes=notes
+            fund_id=fund.id,
+            amount=float(amount),
+            share=float(share) if share else None,
+            price=float(price) if price else None,
+            purchase_date=purchase_date_obj,
+            fee=float(fee) if fee else 0,
+            notes=notes,
+            before_cutoff=before_cutoff
         )
         
         db.session.add(purchase)
@@ -471,11 +467,11 @@ def create_purchase():
         return redirect(url_for('web.my_purchases'))
     
     # GET请求
-    fund_id = request.args.get('fund_id', type=int)
+    fund_code = request.args.get('fund_code')
     preselected_fund = None
     
-    if fund_id:
-        preselected_fund = Fund.query.get(fund_id)
+    if fund_code:
+        preselected_fund = Fund.query.filter_by(code=fund_code).first()
     
     funds = Fund.query.order_by(Fund.code).all()
     today_date = datetime.now().strftime('%Y-%m-%d')
@@ -484,54 +480,51 @@ def create_purchase():
 @web_bp.route('/purchases/<int:purchase_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_purchase(purchase_id):
-    """编辑购买记录页面"""
+    """Edit a purchase record."""
     purchase = Purchase.query.get_or_404(purchase_id)
     
-    # 检查权限
+    # Check if the user owns this purchase
     if purchase.user_id != current_user.id:
-        abort(403)
+        flash('您没有权限编辑此记录', 'danger')
+        return redirect(url_for('web.my_purchases'))
     
     if request.method == 'POST':
-        fund_id = request.form.get('fund_id', type=int)
-        fund_code = request.form.get('fund_code', '')
-        amount = request.form.get('amount', type=float)
-        share = request.form.get('share', type=float)
-        price = request.form.get('price', type=float)
-        purchase_date_str = request.form.get('purchase_date')
-        fee = request.form.get('fee', type=float, default=0.0)
+        fund_code = request.form.get('fund_code')
+        purchase_date = request.form.get('purchase_date')
+        amount = request.form.get('amount')
+        share = request.form.get('share')
+        price = request.form.get('price')
+        fee = request.form.get('fee', 0)
         notes = request.form.get('notes', '')
+        before_cutoff = 'before_cutoff' in request.form
         
-        if not fund_id or not amount or not purchase_date_str:
+        # Validate required fields
+        if not all([fund_code, purchase_date, amount]):
             flash('请填写所有必填字段', 'danger')
-            funds = Fund.query.order_by(Fund.code).all()
-            current_fund = Fund.query.get(purchase.fund_id)
-            return render_template('edit_purchase.html', purchase=purchase, funds=funds, current_fund=current_fund)
+            return redirect(url_for('web.edit_purchase', purchase_id=purchase.id))
         
         # 检查基金是否存在
-        fund = Fund.query.get(fund_id)
+        fund = Fund.query.filter_by(code=fund_code).first()
         if not fund:
             flash('所选基金不存在', 'danger')
-            funds = Fund.query.order_by(Fund.code).all()
-            current_fund = Fund.query.get(purchase.fund_id)
-            return render_template('edit_purchase.html', purchase=purchase, funds=funds, current_fund=current_fund)
+            return redirect(url_for('web.edit_purchase', purchase_id=purchase.id))
         
         # 处理日期
         try:
-            purchase_date = datetime.strptime(purchase_date_str, '%Y-%m-%d').date()
+            purchase_date_obj = datetime.strptime(purchase_date, '%Y-%m-%d').date()
         except ValueError:
             flash('日期格式无效，应为YYYY-MM-DD', 'danger')
-            funds = Fund.query.order_by(Fund.code).all()
-            current_fund = Fund.query.get(purchase.fund_id)
-            return render_template('edit_purchase.html', purchase=purchase, funds=funds, current_fund=current_fund)
+            return redirect(url_for('web.edit_purchase', purchase_id=purchase.id))
         
-        # 更新购买记录
-        purchase.fund_id = fund_id
-        purchase.amount = amount
-        purchase.share = share
-        purchase.price = price
-        purchase.purchase_date = purchase_date
-        purchase.fee = fee
+        # Update purchase record
+        purchase.fund_id = fund.id
+        purchase.amount = float(amount)
+        purchase.share = float(share) if share else None
+        purchase.price = float(price) if price else None
+        purchase.purchase_date = purchase_date_obj
+        purchase.fee = float(fee) if fee else 0
         purchase.notes = notes
+        purchase.before_cutoff = before_cutoff
         
         db.session.commit()
         
@@ -539,9 +532,14 @@ def edit_purchase(purchase_id):
         return redirect(url_for('web.my_purchases'))
     
     # GET请求
+    fund_code = request.args.get('fund_code')
+    preselected_fund = None
+    
+    if fund_code:
+        preselected_fund = Fund.query.filter_by(code=fund_code).first()
+    
     funds = Fund.query.order_by(Fund.code).all()
-    current_fund = Fund.query.get(purchase.fund_id)
-    return render_template('edit_purchase.html', purchase=purchase, funds=funds, current_fund=current_fund)
+    return render_template('edit_purchase.html', purchase=purchase, funds=funds, preselected_fund=preselected_fund)
 
 @web_bp.route('/purchases/<int:purchase_id>/delete', methods=['POST'])
 @login_required

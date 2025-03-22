@@ -116,7 +116,8 @@ def create_purchase():
         price=data.get('price'),
         purchase_date=purchase_date,
         fee=data.get('fee', 0.0),
-        notes=data.get('notes', '')
+        notes=data.get('notes', ''),
+        before_cutoff=data.get('before_cutoff', True)
     )
     
     db.session.add(purchase)
@@ -165,6 +166,9 @@ def update_purchase(purchase_id):
     
     if 'notes' in data:
         purchase.notes = data['notes']
+        
+    if 'before_cutoff' in data:
+        purchase.before_cutoff = data['before_cutoff']
     
     db.session.commit()
     
