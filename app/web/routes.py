@@ -89,10 +89,36 @@ def fund_detail(code):
     notes_pagination = notes_query.paginate(page=page, per_page=per_page)
     notes = notes_pagination.items
     
+    # 获取基金净值数据（最多100条最近记录）
+    fund_values = FundValue.query.filter_by(fund_id=fund.id)\
+        .order_by(FundValue.date.asc())\
+        .limit(100).all()
+    
+    # 如果没有净值数据且用户已登录，尝试获取
+    if not fund_values and current_user.is_authenticated:
+        try:
+            fetch_fund_value(fund_code=code)
+            # 重新查询
+            fund_values = FundValue.query.filter_by(fund_id=fund.id)\
+                .order_by(FundValue.date.asc())\
+                .limit(100).all()
+        except Exception as e:
+            flash(f'获取基金净值数据失败: {str(e)}', 'danger')
+    
+    # 如果用户已登录，获取用户对该基金的购买记录
+    user_purchases = []
+    if current_user.is_authenticated:
+        user_purchases = Purchase.query.filter_by(
+            user_id=current_user.id,
+            fund_id=fund.id
+        ).order_by(Purchase.purchase_date.asc()).all()
+    
     return render_template('fund_detail.html', 
                           fund=fund, 
                           notes=notes, 
-                          pagination=notes_pagination)
+                          pagination=notes_pagination,
+                          fund_values=fund_values,
+                          user_purchases=user_purchases)
 
 # Note pages
 @web_bp.route('/notes')
@@ -427,7 +453,7 @@ def create_purchase():
         price = request.form.get('price')
         fee = request.form.get('fee', 0)
         notes = request.form.get('notes', '')
-        before_cutoff = 'before_cutoff' in request.form
+        before_cutoff = request.form.get('before_cutoff') is not None  # This ensures it defaults to True if checked
         
         # Validate required fields
         if not all([fund_code, purchase_date, amount]):
@@ -496,7 +522,7 @@ def edit_purchase(purchase_id):
         price = request.form.get('price')
         fee = request.form.get('fee', 0)
         notes = request.form.get('notes', '')
-        before_cutoff = 'before_cutoff' in request.form
+        before_cutoff = request.form.get('before_cutoff') is not None  # This ensures it defaults to True if checked
         
         # Validate required fields
         if not all([fund_code, purchase_date, amount]):

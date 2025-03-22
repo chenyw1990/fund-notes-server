@@ -31,6 +31,11 @@
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'web.notes' %}active{% endif %}" href="{{ url_for('web.notes') }}">笔记列表</a>
                     </li>
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'web.my_purchases' %}active{% endif %}" href="{{ url_for('web.my_purchases') }}">购买记录</a>
+                    </li>
+                    {% endif %}
                 </ul>
                 <ul class="navbar-nav">
                     {% if current_user.is_authenticated %}
@@ -41,7 +46,7 @@
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{{ url_for('web.profile') }}">个人资料</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('web.my_notes') }}">我的笔记</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('web.my_purchases') }}">我的购买记录</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('web.create_purchase') }}">记录购买</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('web.logout') }}">退出登录</a></li>
                         </ul>

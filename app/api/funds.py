@@ -6,7 +6,7 @@ import time
 import re
 
 from app.extensions import db, redis_client
-from app.models import Fund, Note
+from app.models import Fund, Note, FundValue
 
 funds_bp = Blueprint('funds', __name__)
 
@@ -651,4 +651,137 @@ def search_fund(code):
             return jsonify({"success": False, "error": "未找到该基金信息"}), 404
             
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500 
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@funds_bp.route('/<string:code>/values', methods=['GET'])
+def get_fund_values(code):
+    """获取基金净值，可通过date参数获取指定日期的净值"""
+    start_time = time.time()
+    date = request.args.get('date')
+    current_app.logger.info(f"API调用: 获取基金净值 - 基金代码: {code}, 日期: {date}")
+    
+    try:
+        # 查询基金
+        fund = Fund.query.filter_by(code=code).first()
+        
+        if fund is None:
+            current_app.logger.warning(f"基金不存在: {code}")
+            response_time = time.time() - start_time
+            current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+            return jsonify({'message': '基金不存在'}), 404
+        
+        from datetime import datetime
+        
+        # 如果指定了日期，则获取指定日期的净值
+        if date:
+            try:
+                target_date = datetime.strptime(date, '%Y-%m-%d').date()
+                # 尝试从缓存获取
+                cache_key = f'fund_value:{fund.id}:{date}'
+                cached_data = redis_client.get(cache_key)
+                
+                if cached_data:
+                    current_app.logger.info(f"缓存命中: {cache_key}")
+                    response_time = time.time() - start_time
+                    current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+                    return jsonify(json.loads(cached_data)), 200
+                
+                # 查询指定日期的净值记录
+                fund_value = FundValue.query.filter_by(fund_id=fund.id, date=target_date).first()
+                
+                if fund_value:
+                    result = {
+                        'code': code,
+                        'date': date,
+                        'value': fund_value.net_value,
+                        'accumulated_value': fund_value.accumulated_value,
+                        'daily_change': fund_value.daily_change
+                    }
+                    
+                    # 缓存结果，设置过期时间为1小时
+                    redis_client.setex(
+                        cache_key,
+                        3600,  # 1小时
+                        json.dumps(result)
+                    )
+                    
+                    response_time = time.time() - start_time
+                    current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+                    return jsonify(result), 200
+                else:
+                    # 如果没有找到指定日期的净值，尝试查找最近的净值记录
+                    closest_value = FundValue.query.filter(
+                        FundValue.fund_id == fund.id,
+                        FundValue.date <= target_date
+                    ).order_by(FundValue.date.desc()).first()
+                    
+                    if closest_value:
+                        result = {
+                            'code': code,
+                            'date': closest_value.date.isoformat(),
+                            'value': closest_value.net_value,
+                            'accumulated_value': closest_value.accumulated_value,
+                            'daily_change': closest_value.daily_change,
+                            'is_exact_date': False
+                        }
+                        
+                        # 缓存结果，设置过期时间为1小时
+                        redis_client.setex(
+                            cache_key,
+                            3600,  # 1小时
+                            json.dumps(result)
+                        )
+                        
+                        response_time = time.time() - start_time
+                        current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+                        return jsonify(result), 200
+            except ValueError:
+                current_app.logger.warning(f"日期格式错误: {date}")
+                return jsonify({'message': '日期格式错误，应为YYYY-MM-DD'}), 400
+        
+        # 如果没有指定日期，则获取所有净值记录（分页）
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        
+        # 尝试从缓存获取
+        cache_key = f'fund_values:{fund.id}:{page}:{per_page}'
+        cached_data = redis_client.get(cache_key)
+        
+        if cached_data:
+            current_app.logger.info(f"缓存命中: {cache_key}")
+            response_time = time.time() - start_time
+            current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+            return jsonify(json.loads(cached_data)), 200
+        
+        # 查询净值记录
+        pagination = FundValue.query.filter_by(fund_id=fund.id)\
+            .order_by(FundValue.date.desc())\
+            .paginate(page=page, per_page=per_page)
+        
+        # 构建响应
+        values = [value.to_dict() for value in pagination.items]
+        
+        result = {
+            'code': code,
+            'values': values,
+            'total': pagination.total,
+            'pages': pagination.pages,
+            'current_page': page
+        }
+        
+        # 缓存结果，设置过期时间为1小时
+        redis_client.setex(
+            cache_key,
+            3600,  # 1小时
+            json.dumps(result)
+        )
+        
+        response_time = time.time() - start_time
+        current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+        return jsonify(result), 200
+    except Exception as e:
+        current_app.logger.error(f"获取基金净值失败: {str(e)}")
+        response_time = time.time() - start_time
+        current_app.logger.info(f"API响应时间: {response_time:.3f}秒")
+        return jsonify({'message': '获取基金净值失败'}), 500 

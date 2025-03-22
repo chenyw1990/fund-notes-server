@@ -38,7 +38,7 @@
 
                     <div class="mb-3">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="before_cutoff" name="before_cutoff" {% if purchase.before_cutoff %}checked{% endif %}>
+                            <input class="form-check-input" type="checkbox" id="before_cutoff" name="before_cutoff" {% if purchase.before_cutoff or purchase.before_cutoff is none %}checked{% endif %}>
                             <label class="form-check-label" for="before_cutoff">
                                 15:00前购买（当日净值）
                             </label>
@@ -130,13 +130,22 @@
         const amountInput = document.getElementById('amount');
         const shareInput = document.getElementById('share');
         const priceInput = document.getElementById('price');
+        const feeInput = document.getElementById('fee');
+        const purchaseDateInput = document.getElementById('purchase_date');
+        const fundCodeInput = document.getElementById('fund_code');
+        const fundIdInput = document.getElementById('fund_id');
+        const beforeCutoffCheckbox = document.getElementById('before_cutoff');
         
         // 当份额和金额都有值时，计算单价
         function calculatePrice() {
             const amount = parseFloat(amountInput.value);
             const share = parseFloat(shareInput.value);
+            const fee = parseFloat(feeInput.value) || 0;
+            
             if (!isNaN(amount) && !isNaN(share) && share > 0) {
-                priceInput.value = (amount / share).toFixed(4);
+                // 单价 = (金额 - 手续费) / 份额
+                const netAmount = amount - fee;
+                priceInput.value = (netAmount / share).toFixed(4);
             }
         }
         
@@ -144,8 +153,39 @@
         function calculateShare() {
             const amount = parseFloat(amountInput.value);
             const price = parseFloat(priceInput.value);
+            const fee = parseFloat(feeInput.value) || 0;
+            
             if (!isNaN(amount) && !isNaN(price) && price > 0) {
-                shareInput.value = (amount / price).toFixed(2);
+                // 份额 = (金额 - 手续费) / 单价
+                const netAmount = amount - fee;
+                shareInput.value = (netAmount / price).toFixed(2);
+            }
+        }
+        
+        // 根据购买日期获取基金净值
+        async function fetchFundValueByDate() {
+            const fundCode = fundCodeInput.value.trim();
+            const purchaseDate = purchaseDateInput.value;
+            
+            if (!fundCode || fundCode.length !== 6 || !purchaseDate || !fundIdInput.value) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/funds/${fundCode}/values?date=${purchaseDate}`);
+                const data = await response.json();
+                
+                if (data.value) {
+                    priceInput.value = data.value.toFixed(4);
+                    
+                    // 如果金额已填写，自动计算份额
+                    const amount = parseFloat(amountInput.value);
+                    if (!isNaN(amount) && amount > 0) {
+                        calculateShare();
+                    }
+                }
+            } catch (error) {
+                console.error("获取基金净值失败:", error);
             }
         }
         
@@ -157,13 +197,29 @@
             else if (priceInput.value) calculateShare();
         });
 
+        // 添加手续费变化监听器
+        feeInput.addEventListener('input', function() {
+            // 如果金额和单价都有值，重新计算份额
+            const amount = parseFloat(amountInput.value);
+            const price = parseFloat(priceInput.value);
+            if (!isNaN(amount) && !isNaN(price) && price > 0) {
+                calculateShare();
+            }
+            // 如果金额和份额都有值，重新计算单价
+            const share = parseFloat(shareInput.value);
+            if (!isNaN(amount) && !isNaN(share) && share > 0) {
+                calculatePrice();
+            }
+        });
+        
+        // 当日期变化或基金变化时，尝试获取净值
+        purchaseDateInput.addEventListener('change', fetchFundValueByDate);
+        
         // 基金查找功能
-        const fundCodeInput = document.getElementById('fund_code');
-        const fundIdInput = document.getElementById('fund_id');
         const fundInfoText = document.getElementById('fund_info');
-        const searchFundBtn = document.getElementById('search_fund_btn');
         const fundNameDisplay = document.getElementById('fund_name_display');
         const selectedFundName = document.getElementById('selected_fund_name');
+        const searchFundBtn = document.getElementById('search_fund_btn');
         
         // 从本地数据查找基金
         const fundsLocal = [
@@ -243,13 +299,22 @@
         }
         
         // 添加搜索按钮点击事件
-        searchFundBtn.addEventListener('click', searchFund);
+        searchFundBtn.addEventListener('click', async function() {
+            await searchFund();
+            if (fundIdInput.value) {
+                fetchFundValueByDate();
+            }
+        });
         
         // 添加回车键搜索
         fundCodeInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                searchFund();
+                searchFund().then(() => {
+                    if (fundIdInput.value) {
+                        fetchFundValueByDate();
+                    }
+                });
             }
         });
         

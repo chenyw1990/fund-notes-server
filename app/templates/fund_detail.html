@@ -2,6 +2,36 @@
 
 {% block title %}{{ fund.name }} ({{ fund.code }}) - 基金笔记系统{% endblock %}
 
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css">
+<style>
+    .fund-value-chart {
+        position: relative;
+        height: 300px;
+        margin-bottom: 2rem;
+    }
+    .purchase-marker {
+        background-color: #28a745;
+        border-radius: 50%;
+        cursor: pointer;
+        position: relative;
+    }
+    .purchase-marker:hover::after {
+        content: attr(data-info);
+        position: absolute;
+        bottom: 25px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #333;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        white-space: nowrap;
+        z-index: 10;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="fund-header">
     <div class="d-flex justify-content-between align-items-start mb-3">
@@ -12,10 +42,44 @@
         <div>
             {% if current_user.is_authenticated %}
                 <a href="{{ url_for('web.create_note', fund_id=fund.id) }}" class="btn btn-success me-2">写笔记</a>
-                <a href="{{ url_for('web.fund_values', code=fund.code) }}" class="btn btn-primary">净值历史</a>
+                <a href="{{ url_for('web.create_purchase', fund_code=fund.code) }}" class="btn btn-primary me-2">记录购买</a>
+                <a href="{{ url_for('web.fund_values', code=fund.code) }}" class="btn btn-outline-primary">净值历史</a>
             {% else %}
-                <a href="{{ url_for('web.fund_values', code=fund.code) }}" class="btn btn-primary">净值历史</a>
+                <a href="{{ url_for('web.fund_values', code=fund.code) }}" class="btn btn-outline-primary">净值历史</a>
             {% endif %}
+        </div>
+    </div>
+    
+    <!-- 基金净值图表 -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">净值走势</h5>
+            <div>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary period-selector active" data-period="week">1周</button>
+                    <button class="btn btn-outline-secondary period-selector" data-period="month">1月</button>
+                    <button class="btn btn-outline-secondary period-selector" data-period="threeMonth">3月</button>
+                    <button class="btn btn-outline-secondary period-selector" data-period="sixMonth">6月</button>
+                    <button class="btn btn-outline-secondary period-selector" data-period="year">1年</button>
+                    <button class="btn btn-outline-secondary period-selector" data-period="all">全部</button>
+                </div>
+                {% if current_user.is_authenticated %}
+                    <form action="{{ url_for('web.refresh_fund_values', code=fund.code) }}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-primary ms-2">刷新数据</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="fund-value-chart">
+                <canvas id="valueChart"></canvas>
+            </div>
+            <div class="text-center small">
+                <span class="d-inline-block me-3"><i class="bi bi-circle-fill text-primary"></i> 净值</span>
+                {% if current_user.is_authenticated %}
+                <span class="d-inline-block"><i class="bi bi-circle-fill text-success"></i> 购买记录</span>
+                {% endif %}
+            </div>
         </div>
     </div>
     
@@ -167,4 +231,246 @@
         </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('valueChart').getContext('2d');
+    let valueChart;
+    let selectedPeriod = 'week';
+    
+    // 解析服务器提供的基金净值数据
+    const fundValues = [
+        {% for value in fund_values %}
+        {
+            date: "{{ value.date.isoformat() }}",
+            net_value: {{ value.net_value }},
+            accumulated_value: {{ value.accumulated_value }},
+            daily_change: {{ value.daily_change or 0 }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    // 解析服务器提供的用户购买记录
+    {% if current_user.is_authenticated %}
+    const userPurchases = [
+        {% for purchase in user_purchases %}
+        {
+            purchase_date: "{{ purchase.purchase_date.isoformat() }}",
+            amount: {{ purchase.amount }},
+            share: {{ purchase.share or 0 }},
+            price: {{ purchase.price or 0 }},
+            before_cutoff: {% if purchase.before_cutoff %}true{% else %}false{% endif %}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    {% else %}
+    const userPurchases = [];
+    {% endif %}
+    
+    // 初始化图表
+    function initChart() {
+        if (fundValues.length === 0) {
+            document.getElementById('valueChart').parentElement.innerHTML = 
+                '<div class="alert alert-info">暂无净值数据，请点击"刷新数据"按钮获取最新数据。</div>';
+            return;
+        }
+        
+        // 对数据按日期排序
+        fundValues.sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        // 生成图表数据
+        updateChart(fundValues, userPurchases, selectedPeriod);
+        
+        // 设置时间段选择器事件
+        document.querySelectorAll('.period-selector').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.period-selector').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                selectedPeriod = this.getAttribute('data-period');
+                updateChart(fundValues, userPurchases, selectedPeriod);
+            });
+        });
+    }
+    
+    // 更新图表显示
+    function updateChart(values, purchases, period) {
+        // 根据选择的时间段筛选数据
+        const filtered = filterDataByPeriod(values, period);
+        if (filtered.length === 0) return;
+        
+        // 准备图表数据
+        const dates = filtered.map(item => item.date);
+        const netValues = filtered.map(item => item.net_value);
+        
+        // 准备购买记录数据
+        const purchasePoints = [];
+        purchases.forEach(purchase => {
+            const purchaseDate = purchase.purchase_date;
+            const index = dates.indexOf(purchaseDate);
+            
+            // 如果购买日期在图表范围内
+            if (index !== -1) {
+                purchasePoints.push({
+                    x: purchaseDate,
+                    y: netValues[index],
+                    purchase: purchase
+                });
+            } else {
+                // 找最接近的日期
+                const purchaseTime = new Date(purchaseDate).getTime();
+                let closestIndex = -1;
+                let minDiff = Infinity;
+                
+                dates.forEach((date, i) => {
+                    const diff = Math.abs(new Date(date).getTime() - purchaseTime);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestIndex = i;
+                    }
+                });
+                
+                if (closestIndex !== -1 && minDiff < 86400000 * 7) { // 7天内的最接近日期
+                    purchasePoints.push({
+                        x: dates[closestIndex],
+                        y: netValues[closestIndex],
+                        purchase: purchase
+                    });
+                }
+            }
+        });
+        
+        // 销毁旧图表
+        if (valueChart) {
+            valueChart.destroy();
+        }
+        
+        // 创建新图表
+        valueChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [
+                    {
+                        label: '单位净值',
+                        data: netValues,
+                        borderColor: 'rgba(13, 110, 253, 1)',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true
+                    },
+                    {
+                        label: '购买记录',
+                        data: purchasePoints,
+                        borderColor: 'transparent',
+                        backgroundColor: '#28a745',
+                        pointStyle: 'circle',
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                if (context.dataset.label === '购买记录' && context.raw.purchase) {
+                                    const purchase = context.raw.purchase;
+                                    return [
+                                        `日期: ${purchase.purchase_date}`,
+                                        `金额: ${purchase.amount}元`,
+                                        `份额: ${purchase.share}`,
+                                        `${purchase.before_cutoff ? '15:00前' : '15:00后'}`
+                                    ];
+                                }
+                                return `单位净值: ${context.parsed.y}`;
+                            }
+                        }
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45,
+                            callback: function(value, index, values) {
+                                if (dates.length > 30) {
+                                    return index % 5 === 0 ? this.getLabelForValue(value) : '';
+                                }
+                                return this.getLabelForValue(value);
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value.toFixed(4);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // 根据时间段筛选数据
+    function filterDataByPeriod(values, period) {
+        if (values.length === 0) return [];
+        
+        const now = new Date();
+        let startDate;
+        
+        switch (period) {
+            case 'week':
+                startDate = new Date(now);
+                startDate.setDate(now.getDate() - 7);
+                break;
+            case 'month':
+                startDate = new Date(now);
+                startDate.setMonth(now.getMonth() - 1);
+                break;
+            case 'threeMonth':
+                startDate = new Date(now);
+                startDate.setMonth(now.getMonth() - 3);
+                break;
+            case 'sixMonth':
+                startDate = new Date(now);
+                startDate.setMonth(now.getMonth() - 6);
+                break;
+            case 'year':
+                startDate = new Date(now);
+                startDate.setFullYear(now.getFullYear() - 1);
+                break;
+            case 'all':
+            default:
+                return values;
+        }
+        
+        startDate.setHours(0, 0, 0, 0);
+        return values.filter(item => new Date(item.date) >= startDate);
+    }
+    
+    // 初始化图表
+    initChart();
+});
+</script>
 {% endblock %} 
